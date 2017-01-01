@@ -27,7 +27,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
   elasticsearch:
-    image: "elasticsearch:5"
+    image: "elasticsearch:5-alpine"
     ports:
       - "9200:9200"
       - "9300:9300"

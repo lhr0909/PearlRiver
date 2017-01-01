@@ -5,11 +5,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.elasticsearch.action.index.IndexRequest;
+import org.joda.time.DateTimeZone;
+import org.joda.time.chrono.ISOChronology;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -18,9 +24,14 @@ import java.util.Map;
  */
 @AllArgsConstructor
 @Getter
-public class FilebeatEvent implements Serializable {
+public class FilebeatEvent implements Serializable, Event {
     private static final long serialVersionUID = -1061534942493817146L;
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final DateTimeFormatter dateTimeFormatter = DateTimeFormat
+            .forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+            .withLocale(Locale.ENGLISH)
+            .withZone(DateTimeZone.UTC)
+            .withChronology(ISOChronology.getInstanceUTC());
 
     @JsonProperty("@timestamp")
     private final String timestamp;
@@ -46,17 +57,26 @@ public class FilebeatEvent implements Serializable {
         return objectMapper.readValue(json, FilebeatEvent.class);
     }
 
+    @Override
     public IndexRequest toIndexRequest() {
-        String index = fields.getOrDefault("token", "null") + "." + type;
+        String index = fields.getOrDefault("token", "null") + "." + getType();
         return new IndexRequest(
                 index,
-                type
+                getType()
         );
     }
 
-    public Map<String, String> toEsPayload() {
-        Map<String, String> payload = new HashMap<>();
+    @Override
+    public Map<String, Object> toPayload() {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("@timestamp", dateTimeFormatter.parseMillis(timestamp));
+        payload.put("beat", beat);
+        payload.put("fields", fields);
         payload.put("message", message);
+        payload.put("offset", offset);
+        payload.put("source", source);
+        payload.put("tags", tags);
+        payload.put("type", type);
         return payload;
     }
 }
