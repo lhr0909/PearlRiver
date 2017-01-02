@@ -41,10 +41,12 @@ dependencies {
     compile 'com.typesafe.akka:akka-typed-experimental_2.11:2.4.16'
     compile 'com.typesafe.akka:akka-persistence-query-experimental_2.11:2.4.16'
 
+    compile 'joda-time:joda-time:2.9.5'
     compile 'org.apache.bahir:spark-streaming-akka_2.11:2.0.1'
     compile group: "com.typesafe.akka", name: "akka-stream-kafka_2.11", version: "0.13"
     compile 'org.json4s:json4s-native_2.11:3.5.0'
     compile 'org.json4s:json4s-jackson_2.11:3.5.0'
+    //TODO: explicitly add jackson
 
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.7'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.7'

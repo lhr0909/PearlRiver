@@ -6,7 +6,6 @@ import lombok.Getter;
 import org.elasticsearch.action.index.IndexRequest;
 
 import java.io.Serializable;
-import java.text.ParseException;
 import java.util.Map;
 
 /**
@@ -22,17 +21,18 @@ public class KafkaEvent implements Serializable, Event {
     private final Event event;
 
     @Override
+    public String getIndexName() {
+        return "kafka." + getTopic() + "." + event.getIndexName();
+    }
+
+    @Override
     public String getType() {
         return "kafka_" + event.getType();
     }
 
     @Override
     public IndexRequest toIndexRequest() {
-        return new IndexRequest(
-                "kafka_" + getTopic(),
-                getType(),
-                getId()
-        );
+        return new IndexRequest(getIndexName(), getType(), getId());
     }
 
     @Override
@@ -41,11 +41,15 @@ public class KafkaEvent implements Serializable, Event {
     }
 
     public String getId() {
-        return getTopic() + "." + Long.toString(getOffset());
+        return getTopic() + "." + Integer.toString(getPartition()) + "." + Long.toString(getOffset());
     }
 
     private String getTopic() {
         return committableOffset.partitionOffset().key().topic();
+    }
+
+    private int getPartition() {
+        return committableOffset.partitionOffset().key().partition();
     }
 
     private long getOffset() {

@@ -12,7 +12,6 @@ import org.joda.time.format.DateTimeFormatter;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -58,12 +57,12 @@ public class FilebeatEvent implements Serializable, Event {
     }
 
     @Override
+    public String getIndexName() {
+        return fields.getOrDefault("token", "_default_") + "." + getType();
+    }
+    @Override
     public IndexRequest toIndexRequest() {
-        String index = fields.getOrDefault("token", "null") + "." + getType();
-        return new IndexRequest(
-                index,
-                getType()
-        );
+        return new IndexRequest(getIndexName(), getType());
     }
 
     @Override
