@@ -1,14 +1,15 @@
 package com.hoolix.processor
 
+import java.io.File
 import java.net.InetAddress
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Props}
 import akka.kafka.ConsumerSettings
 import akka.stream.ActorMaterializer
-import com.hoolix.processor.pipelines.sinks.ElasticsearchBulkRequestSink
-import com.hoolix.processor.pipelines.sources.KafkaSource
+import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
+import com.hoolix.processor.sources.KafkaSource
 import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
@@ -27,8 +28,7 @@ import scala.concurrent.duration._
 object XYZProcessorMain extends App {
 
   override def main(args: Array[String]): Unit = {
-    //TODO: figure out how to load config from outside of resources folder
-    val config = ConfigFactory.load
+    val config = ConfigFactory.parseFile(new File("conf/application.conf"))
 
     implicit val system = ActorSystem("xyz-processor", config)
     implicit val materializer = ActorMaterializer()
@@ -40,12 +40,12 @@ object XYZProcessorMain extends App {
       .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("0.0.0.0"), 9300))
     val esSink = ElasticsearchBulkRequestSink(esClient, -1, 0, executionContext)
 
-    //TODO: put all consumer settings in application.conf
+    //TODO: kafka consumer settings in application.conf
     val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new StringDeserializer)
       .withBootstrapServers("0.0.0.0:9092")
       .withGroupId("xyz-processor")
       .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
-    val kafkaSource = KafkaSource(10, consumerSettings, "hooli_topic")
+    val kafkaSource = KafkaSource(20, consumerSettings, "hooli_topic")
 
     // main stream
     val mainStream = kafkaSource.toSource.runWith(esSink.toSink)
