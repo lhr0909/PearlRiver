@@ -8,8 +8,10 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{ActorSystem, Props}
 import akka.kafka.ConsumerSettings
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Keep
 import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
 import com.hoolix.processor.sources.KafkaSource
+import com.hoolix.processor.streams.KafkaOffsetCommitStream
 import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
@@ -38,7 +40,7 @@ object XYZProcessorMain extends App {
     //TODO: es client settings in application.conf
     val esClient = new PreBuiltTransportClient(Settings.EMPTY)
       .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("0.0.0.0"), 9300))
-    val esSink = ElasticsearchBulkRequestSink(esClient, -1, 0, executionContext)
+
 
     //TODO: kafka consumer settings in application.conf
     val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new StringDeserializer)
@@ -48,7 +50,23 @@ object XYZProcessorMain extends App {
     val kafkaSource = KafkaSource(20, consumerSettings, "hooli_topic")
 
     // main stream
-    val mainStream = kafkaSource.toSource.runWith(esSink.toSink)
+    val maxBulkSize = 100000
+
+    val kafkaOffsetCommitStreamContext = KafkaOffsetCommitStream(
+      bufferSize = maxBulkSize,
+      parallelism = 3,
+      executionContext
+    ).stream.run()
+
+    val esSink = ElasticsearchBulkRequestSink(
+      esClient,
+      maxBulkSize = 100000,
+      concurrentRequests = 3,
+      kafkaOffsetCommitStreamContext,
+      executionContext
+    )
+
+    val (mainStream, control) = kafkaSource.source.toMat(esSink.sink)(Keep.both).run()
 
     //TODO: improve logging
     scala.sys.addShutdownHook {
