@@ -1,9 +1,7 @@
 package com.hoolix.processor.sinks
 
 import akka.NotUsed
-import akka.actor.ActorRef
-import akka.kafka.ConsumerMessage.CommittableOffsetBatch
-import akka.stream.scaladsl.{Flow, Sink, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Flow, Sink}
 import com.hoolix.processor.models.KafkaEvent
 import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink.AfterBulkTrigger
 import com.hoolix.processor.streams.KafkaOffsetCommitStream
@@ -20,14 +18,13 @@ import scala.concurrent.ExecutionContext
   * Created by simon on 1/1/17.
   */
 object ElasticsearchBulkRequestSink {
-  case class BeforeBulkTrigger()
-  case class AfterBulkTrigger()
+  class BeforeBulkTrigger()
+  class AfterBulkTrigger()
 }
 
 case class ElasticsearchBulkRequestSink(
                                        elasticsearchClient: TransportClient,
                                        maxBulkSize: Int,
-                                       concurrentRequests: Int,
                                        kafkaOffsetCommitStreamContext: KafkaOffsetCommitStream.MaterializedContext,
                                        implicit val ec: ExecutionContext
                                        ) {
@@ -42,7 +39,7 @@ case class ElasticsearchBulkRequestSink(
 
     override def afterBulk(executionId: Long, request: BulkRequest, response: BulkResponse) = {
       bulking = false
-      afterBulkTriggerActor ! AfterBulkTrigger
+      afterBulkTriggerActor ! new AfterBulkTrigger()
       println("bulk result")
       println("bulk size - " + response.getItems.length)
       println("bulk time - " + response.getTookInMillis)
@@ -56,7 +53,7 @@ case class ElasticsearchBulkRequestSink(
   })
     .setBulkActions(maxBulkSize)
     .setBulkSize(new ByteSizeValue(5, ByteSizeUnit.MB))
-    .setConcurrentRequests(concurrentRequests)
+    .setConcurrentRequests(1)
     .setBackoffPolicy(
       BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3)
     )
@@ -80,12 +77,9 @@ case class ElasticsearchBulkRequestSink(
   }
 
   def sink: Sink[KafkaEvent, NotUsed] = {
-    val flow = startingFlow.mapConcat(_.to[immutable.Seq])
-    if (concurrentRequests < 1) {
-      flow.to(Sink.foreach(processKafkaEvent))
-    } else {
-      flow.to(Sink.foreachParallel(concurrentRequests)(processKafkaEvent))
-    }
+    startingFlow
+      .mapConcat(_.to[immutable.Seq])
+      .to(Sink.foreach(processKafkaEvent))
   }
 }
 

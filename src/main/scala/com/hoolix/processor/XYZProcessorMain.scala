@@ -61,7 +61,6 @@ object XYZProcessorMain extends App {
     val esSink = ElasticsearchBulkRequestSink(
       esClient,
       maxBulkSize = 100000,
-      concurrentRequests = 3,
       kafkaOffsetCommitStreamContext,
       executionContext
     )

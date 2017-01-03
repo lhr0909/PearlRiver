@@ -51,12 +51,22 @@ case class KafkaOffsetCommitStream(
           val zipBulkSource = builder.add(ZipWith((batch: Seq[KafkaEvent], trigger: AfterBulkTrigger) => batch))
           val zipBulkingSource = builder.add(ZipWith((batch: Seq[KafkaEvent], trigger: AfterBulkTrigger) => batch))
           val broadcastSignal = builder.add(Broadcast[AfterBulkTrigger](outputPorts = 2))
-          val mapConcatFlow = builder.add(Flow[Seq[KafkaEvent]].mapConcat(_.to[immutable.Seq]))
+
+          val mapConcatFlow = builder.add(
+            Flow[Seq[KafkaEvent]]
+              .mapConcat { bulkingBatch =>
+                println("moving bulking batch w/ size of " + bulkingBatch.length)
+                bulkingBatch.to[immutable.Seq]
+              }
+          )
 
           //TODO: this sink is sloooow, change to one that uses batch
           val offsetCommitSink = builder.add(
             Flow[Seq[KafkaEvent]]
-              .mapConcat(_.to[immutable.Seq])
+              .mapConcat { bulkedBatch =>
+                println("commiting batch offset w/ size of " + bulkedBatch.length)
+                bulkedBatch.to[immutable.Seq]
+              }
               .to(Sink.foreachParallel(parallelism)(_.getCommittableOffset.commitScaladsl()))
           )
 
