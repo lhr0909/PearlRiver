@@ -5,7 +5,7 @@ import akka.kafka.scaladsl.Consumer
 import akka.kafka.{ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.Source
 import com.hoolix.processor.models.builders.KafkaEventBuilder
-import com.hoolix.processor.models.{FilebeatEvent, KafkaEvent}
+import com.hoolix.processor.models.{FileBeatEvent, KafkaEvent}
 
 import scala.concurrent.Future
 
@@ -22,7 +22,7 @@ case class KafkaSource(
   def convertToKafkaEvent(committableMessage: CommittableMessage[Array[Byte], String]): Future[KafkaEvent] = {
     val kafkaEvent = new KafkaEventBuilder()
       .setCommittableOffset(committableMessage.committableOffset)
-      .setEvent(FilebeatEvent.fromJsonString(committableMessage.record.value))
+      .setEvent(FileBeatEvent.fromJsonString(committableMessage.record.value))
       .build()
     Future.successful(kafkaEvent)
   }

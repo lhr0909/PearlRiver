@@ -23,7 +23,7 @@ import java.util.Map;
  */
 @AllArgsConstructor
 @Getter
-public class FilebeatEvent implements Serializable, Event {
+public class FileBeatEvent implements Serializable, Event, ESSink {
     private static final long serialVersionUID = -1061534942493817146L;
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final DateTimeFormatter dateTimeFormatter = DateTimeFormat
@@ -32,7 +32,6 @@ public class FilebeatEvent implements Serializable, Event {
             .withZone(DateTimeZone.UTC)
             .withChronology(ISOChronology.getInstanceUTC());
 
-    @JsonProperty("@timestamp")
     private final String timestamp;
 
     private final Beat beat;
@@ -52,8 +51,8 @@ public class FilebeatEvent implements Serializable, Event {
 
     private final String type;
 
-    public static FilebeatEvent fromJsonString(String json) throws IOException {
-        return objectMapper.readValue(json, FilebeatEvent.class);
+    public static FileBeatEvent fromJsonString(String json) throws IOException {
+        return objectMapper.readValue(json, FileBeatEvent.class);
     }
 
     @Override
@@ -68,7 +67,7 @@ public class FilebeatEvent implements Serializable, Event {
     @Override
     public Map<String, Object> toPayload() {
         Map<String, Object> payload = new HashMap<>();
-        payload.put("@timestamp", dateTimeFormatter.parseMillis(timestamp));
+        payload.put("timestamp", dateTimeFormatter.parseMillis(timestamp));
         payload.put("beat", beat);
         payload.put("fields", fields);
         payload.put("message", message);

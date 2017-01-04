@@ -14,7 +14,7 @@ import java.util.Map;
  */
 @AllArgsConstructor
 @Getter
-public class KafkaEvent implements Serializable, Event {
+public class KafkaEvent implements Serializable, Event, ESSink {
     private static final long serialVersionUID = 667291746043562470L;
 
     private final CommittableOffset committableOffset;
