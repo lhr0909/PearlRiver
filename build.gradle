@@ -41,6 +41,8 @@ dependencies {
     compile 'com.typesafe.akka:akka-typed-experimental_2.11:2.4.16'
     compile 'com.typesafe.akka:akka-persistence-query-experimental_2.11:2.4.16'
 
+    compile 'com.typesafe.akka:akka-http_2.11:10.0.1'
+
     compile 'joda-time:joda-time:2.9.5'
     compile 'org.apache.bahir:spark-streaming-akka_2.11:2.0.1'
     compile group: "com.typesafe.akka", name: "akka-stream-kafka_2.11", version: "0.13"

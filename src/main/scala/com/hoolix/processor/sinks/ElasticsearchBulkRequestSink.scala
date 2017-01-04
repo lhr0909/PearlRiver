@@ -18,59 +18,72 @@ import scala.concurrent.ExecutionContext
   * Created by simon on 1/1/17.
   */
 object ElasticsearchBulkRequestSink {
-  class BeforeBulkTrigger()
-  class AfterBulkTrigger()
+  def apply(
+    elasticsearchClient: TransportClient,
+    maxBulkSize: Int,
+    concurrentRequests: Int,
+    ec: ExecutionContext
+  ) = new ElasticsearchBulkRequestSink(elasticsearchClient, maxBulkSize, concurrentRequests, ec)
+
+  class ElasticsearchBulkRequestSink(
+                                      elasticsearchClient: TransportClient,
+                                      maxBulkSize: Int,
+                                      concurrentRequests: Int,
+                                      implicit val ec: ExecutionContext
+                                    ) {
+
+    val bulkProcessor: BulkProcessor = BulkProcessor.builder(elasticsearchClient, new Listener {
+      override def beforeBulk(executionId: Long, request: BulkRequest) = {
+        println(s"Bulk Request #$executionId - " + request.numberOfActions + " events being indexed")
+      }
+
+      override def afterBulk(
+                              executionId: Long,
+                              request: BulkRequest,
+                              response: BulkResponse,
+                              offsetBatch: CommittableOffsetBatch
+                            ) = {
+
+        println(s"bulk result for Bulk Request #$executionId")
+        println("bulk size - " + response.getItems.length)
+        println("bulk time - " + response.getTookInMillis)
+        println("end bulk result")
+        println("committing kafka offsets - " + offsetBatch.offsets())
+        offsetBatch.commitScaladsl()
+
+      }
+
+      override def afterBulk(executionId: Long, request: BulkRequest, failure: Throwable) = {
+        throw failure
+      }
+    }).setBulkActions(maxBulkSize)
+      .setBulkSize(new ByteSizeValue(5, ByteSizeUnit.MB))
+      .setConcurrentRequests(concurrentRequests)
+      .setBackoffPolicy(
+        BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3)
+      ).build()
+
+    def startingFlow: Flow[KafkaEvent, Seq[KafkaEvent], NotUsed] = {
+      if (maxBulkSize < 0) {
+        Flow[KafkaEvent].conflateWithSeed(Seq(_))(_ :+ _)
+      } else {
+        Flow[KafkaEvent].batch(maxBulkSize, Seq(_))(_ :+ _)
+      }
+    }
+
+    def processKafkaEvent(event: KafkaEvent): Unit = {
+      bulkProcessor.add(event.toIndexRequest.source(event.toPayload), event.getCommittableOffset)
+    }
+
+    def sink: Sink[KafkaEvent, NotUsed] = {
+      val flow = startingFlow.mapConcat(_.to[immutable.Seq])
+      if (concurrentRequests < 1) {
+        flow.to(Sink.foreach(processKafkaEvent))
+      } else {
+        flow.to(Sink.foreachParallel(concurrentRequests)(processKafkaEvent))
+      }
+    }
+  }
+
 }
-
-case class ElasticsearchBulkRequestSink(
-                                       elasticsearchClient: TransportClient,
-                                       maxBulkSize: Int,
-                                       implicit val ec: ExecutionContext
-                                       ) {
-
-  val bulkProcessor: BulkProcessor = BulkProcessor.builder(elasticsearchClient, new Listener {
-    override def beforeBulk(executionId: Long, request: BulkRequest) = {
-      println(s"Bulk Request #$executionId - " + request.numberOfActions + " events being indexed")
-    }
-
-    override def afterBulk(executionId: Long, request: BulkRequest, response: BulkResponse, offsetBatch: CommittableOffsetBatch) = {
-      println(s"bulk result for Bulk Request #$executionId")
-      println("bulk size - " + response.getItems.length)
-      println("bulk time - " + response.getTookInMillis)
-      println("end bulk result")
-      println("committing kafka offsets - " + offsetBatch.offsets())
-      offsetBatch.commitScaladsl()
-    }
-
-    override def afterBulk(executionId: Long, request: BulkRequest, failure: Throwable) = {
-      throw failure
-    }
-  })
-    .setBulkActions(maxBulkSize)
-    .setBulkSize(new ByteSizeValue(5, ByteSizeUnit.MB))
-    .setConcurrentRequests(1)
-    .setBackoffPolicy(
-      BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3)
-    )
-    .build()
-
-  def startingFlow: Flow[KafkaEvent, Seq[KafkaEvent], NotUsed] = {
-    if (maxBulkSize < 0) {
-      Flow[KafkaEvent].conflateWithSeed(Seq(_))(_ :+ _)
-    } else {
-      Flow[KafkaEvent].batch(maxBulkSize, Seq(_))(_ :+ _)
-    }
-  }
-
-  def processKafkaEvent(event: KafkaEvent): Unit = {
-    bulkProcessor.add(event.toIndexRequest.source(event.toPayload), event.getCommittableOffset)
-  }
-
-  def sink: Sink[KafkaEvent, NotUsed] = {
-    startingFlow
-      .mapConcat(_.to[immutable.Seq])
-      .to(Sink.foreach(processKafkaEvent))
-  }
-}
-
 

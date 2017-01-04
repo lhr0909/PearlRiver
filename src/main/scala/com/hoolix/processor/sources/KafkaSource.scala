@@ -23,17 +23,16 @@ object KafkaSource {
     Future.successful(kafkaEvent)
   }
 
-}
+  def apply(
+             parallelism: Int,
+             kafkaConsumerSettings: ConsumerSettings[Array[Byte], String],
+             kafkaTopics: Set[String]
+           ): Source[KafkaEvent, Consumer.Control] = {
 
-case class KafkaSource(
-                      parallelism: Int,
-                      kafkaConsumerSettings: ConsumerSettings[Array[Byte], String],
-                      kafkaTopics: String*
-                      ) {
-
-  def source: Source[KafkaEvent, Consumer.Control] = {
-    Consumer.committableSource(kafkaConsumerSettings, Subscriptions.topics(kafkaTopics.toSet))
+    Consumer.committableSource(kafkaConsumerSettings, Subscriptions.topics(kafkaTopics))
       .mapAsync(parallelism)(KafkaSource.convertToKafkaEvent)
-  }
 
+  }
 }
+
+

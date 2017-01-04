@@ -20,6 +20,10 @@ public class KafkaEvent implements Serializable, Event {
     private final CommittableOffset committableOffset;
     private final Event event;
 
+    public CommittableOffset getCommittableOffset() {
+        return committableOffset;
+    }
+
     @Override
     public String getIndexName() {
         return "kafka." + getTopic() + "." + event.getIndexName();
