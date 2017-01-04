@@ -30,15 +30,15 @@ case class ElasticsearchBulkRequestSink(
 
   val bulkProcessor: BulkProcessor = BulkProcessor.builder(elasticsearchClient, new Listener {
     override def beforeBulk(executionId: Long, request: BulkRequest) = {
-      println("# of bulks being flushed - " + request.numberOfActions)
+      println(s"Bulk Request #$executionId - " + request.numberOfActions + " events being indexed")
     }
 
     override def afterBulk(executionId: Long, request: BulkRequest, response: BulkResponse, offsetBatch: CommittableOffsetBatch) = {
-      println("bulk result")
+      println(s"bulk result for Bulk Request #$executionId")
       println("bulk size - " + response.getItems.length)
       println("bulk time - " + response.getTookInMillis)
       println("end bulk result")
-      println("committing kafka offset batch w/ size of " + offsetBatch.offsets().size)
+      println("committing kafka offsets - " + offsetBatch.offsets())
       offsetBatch.commitScaladsl()
     }
 

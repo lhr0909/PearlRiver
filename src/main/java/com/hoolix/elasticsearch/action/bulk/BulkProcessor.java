@@ -294,7 +294,7 @@ public class BulkProcessor implements Closeable {
         ensureOpen();
         bulkRequest.add(request, payload);
         if (offset != null) {
-            kafkaOffsetBatch.updated(offset);
+            this.kafkaOffsetBatch = kafkaOffsetBatch.updated(offset);
         }
         executeIfNeeded();
     }
