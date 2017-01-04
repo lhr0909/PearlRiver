@@ -1,6 +1,7 @@
 package com.hoolix.processor.sinks
 
 import akka.NotUsed
+import akka.kafka.ConsumerMessage.CommittableOffsetBatch
 import akka.stream.scaladsl.{Flow, Sink}
 import com.hoolix.processor.models.KafkaEvent
 import com.hoolix.elasticsearch.action.bulk.BulkProcessor.Listener
@@ -32,11 +33,13 @@ case class ElasticsearchBulkRequestSink(
       println("# of bulks being flushed - " + request.numberOfActions)
     }
 
-    override def afterBulk(executionId: Long, request: BulkRequest, response: BulkResponse) = {
+    override def afterBulk(executionId: Long, request: BulkRequest, response: BulkResponse, offsetBatch: CommittableOffsetBatch) = {
       println("bulk result")
       println("bulk size - " + response.getItems.length)
       println("bulk time - " + response.getTookInMillis)
       println("end bulk result")
+      println("committing kafka offset batch w/ size of " + offsetBatch.offsets().size)
+      offsetBatch.commitScaladsl()
     }
 
     override def afterBulk(executionId: Long, request: BulkRequest, failure: Throwable) = {

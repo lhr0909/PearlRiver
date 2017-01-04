@@ -1,5 +1,6 @@
 package com.hoolix.elasticsearch.action.bulk;
 
+import akka.kafka.ConsumerMessage;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.apache.logging.log4j.util.Supplier;
@@ -31,7 +32,7 @@ abstract class BulkRequestHandler {
     }
 
 
-    public abstract void execute(BulkRequest bulkRequest, long executionId);
+    public abstract void execute(BulkRequest bulkRequest, ConsumerMessage.CommittableOffsetBatch offsetBatch, long executionId);
 
     public abstract boolean awaitClose(long timeout, TimeUnit unit) throws InterruptedException;
 
@@ -55,7 +56,7 @@ abstract class BulkRequestHandler {
         }
 
         @Override
-        public void execute(BulkRequest bulkRequest, long executionId) {
+        public void execute(BulkRequest bulkRequest, ConsumerMessage.CommittableOffsetBatch offsetBatch, long executionId) {
             boolean afterCalled = false;
             try {
                 listener.beforeBulk(executionId, bulkRequest);
@@ -64,7 +65,7 @@ abstract class BulkRequestHandler {
                         .policy(backoffPolicy)
                         .withSyncBackoff(client, bulkRequest);
                 afterCalled = true;
-                listener.afterBulk(executionId, bulkRequest, bulkResponse);
+                listener.afterBulk(executionId, bulkRequest, bulkResponse, offsetBatch);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 logger.info((Supplier<?>) () -> new ParameterizedMessage("Bulk request {} has been cancelled.", executionId), e);
@@ -102,7 +103,7 @@ abstract class BulkRequestHandler {
         }
 
         @Override
-        public void execute(BulkRequest bulkRequest, long executionId) {
+        public void execute(BulkRequest bulkRequest, ConsumerMessage.CommittableOffsetBatch offsetBatch, long executionId) {
             boolean bulkRequestSetupSuccessful = false;
             boolean acquired = false;
             try {
@@ -115,7 +116,7 @@ abstract class BulkRequestHandler {
                             @Override
                             public void onResponse(BulkResponse response) {
                                 try {
-                                    listener.afterBulk(executionId, bulkRequest, response);
+                                    listener.afterBulk(executionId, bulkRequest, response, offsetBatch);
                                 } finally {
                                     semaphore.release();
                                 }

@@ -1,5 +1,6 @@
 package com.hoolix.elasticsearch.action.bulk;
 
+import akka.kafka.ConsumerMessage;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.bulk.BackoffPolicy;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -48,7 +49,7 @@ public class BulkProcessor implements Closeable {
         /**
          * Callback after a successful execution of bulk request.
          */
-        void afterBulk(long executionId, BulkRequest request, BulkResponse response);
+        void afterBulk(long executionId, BulkRequest request, BulkResponse response, ConsumerMessage.CommittableOffsetBatch offsetBatch);
 
         /**
          * Callback after a failed execution of bulk request.
@@ -171,6 +172,7 @@ public class BulkProcessor implements Closeable {
     private final AtomicLong executionIdGen = new AtomicLong();
 
     private BulkRequest bulkRequest;
+    private ConsumerMessage.CommittableOffsetBatch kafkaOffsetBatch;
     private final BulkRequestHandler bulkRequestHandler;
 
     private volatile boolean closed = false;
@@ -180,6 +182,7 @@ public class BulkProcessor implements Closeable {
         this.bulkSize = bulkSize.getBytes();
 
         this.bulkRequest = new BulkRequest();
+        this.kafkaOffsetBatch = ConsumerMessage.emptyCommittableOffsetBatch();
         this.bulkRequestHandler = (concurrentRequests == 0) ? BulkRequestHandler.syncHandler(client, backoffPolicy, listener) : BulkRequestHandler.asyncHandler(client, backoffPolicy, listener, concurrentRequests);
 
         if (flushInterval != null) {
@@ -241,6 +244,13 @@ public class BulkProcessor implements Closeable {
     }
 
     /**
+     * 添加一个 {@link IndexRequest} 和一个 {@link akka.kafka.ConsumerMessage.CommittableOffset}
+     */
+    public BulkProcessor add(IndexRequest request, ConsumerMessage.CommittableOffset offset) {
+        return add((ActionRequest) request, null, offset);
+    }
+
+    /**
      * Adds an {@link DeleteRequest} to the list of actions to execute.
      */
     public BulkProcessor add(DeleteRequest request) {
@@ -248,14 +258,25 @@ public class BulkProcessor implements Closeable {
     }
 
     /**
+     * 添加一个 {@link DeleteRequest} 和一个 {@link akka.kafka.ConsumerMessage.CommittableOffset}
+     */
+    public BulkProcessor add(DeleteRequest request, ConsumerMessage.CommittableOffset offset) {
+        return add((ActionRequest) request, null, offset);
+    }
+
+    /**
      * Adds either a delete or an index request.
      */
     public BulkProcessor add(ActionRequest request) {
-        return add(request, null);
+        return add(request, null, null);
     }
 
     public BulkProcessor add(ActionRequest request, @Nullable Object payload) {
-        internalAdd(request, payload);
+        return add(request, payload, null);
+    }
+
+    public BulkProcessor add(ActionRequest request, @Nullable Object payload, ConsumerMessage.CommittableOffset offset) {
+        internalAdd(request, payload, offset);
         return this;
     }
 
@@ -269,9 +290,12 @@ public class BulkProcessor implements Closeable {
         }
     }
 
-    private synchronized void internalAdd(ActionRequest request, @Nullable Object payload) {
+    private synchronized void internalAdd(ActionRequest request, @Nullable Object payload, ConsumerMessage.CommittableOffset offset) {
         ensureOpen();
         bulkRequest.add(request, payload);
+        if (offset != null) {
+            kafkaOffsetBatch.updated(offset);
+        }
         executeIfNeeded();
     }
 
@@ -296,10 +320,12 @@ public class BulkProcessor implements Closeable {
     // (currently) needs to be executed under a lock
     private void execute() {
         final BulkRequest bulkRequest = this.bulkRequest;
+        final ConsumerMessage.CommittableOffsetBatch offsetBatch = this.kafkaOffsetBatch;
         final long executionId = executionIdGen.incrementAndGet();
 
         this.bulkRequest = new BulkRequest();
-        this.bulkRequestHandler.execute(bulkRequest, executionId);
+        this.kafkaOffsetBatch = ConsumerMessage.emptyCommittableOffsetBatch();
+        this.bulkRequestHandler.execute(bulkRequest, offsetBatch, executionId);
     }
 
     private boolean isOverTheLimit() {
