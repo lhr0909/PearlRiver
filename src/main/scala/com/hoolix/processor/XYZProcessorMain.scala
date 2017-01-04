@@ -5,13 +5,12 @@ import java.net.InetAddress
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.ActorSystem
 import akka.kafka.ConsumerSettings
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Keep
 import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
 import com.hoolix.processor.sources.KafkaSource
-import com.hoolix.processor.streams.KafkaOffsetCommitStream
 import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
@@ -49,19 +48,9 @@ object XYZProcessorMain extends App {
       .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
     val kafkaSource = KafkaSource(20, consumerSettings, "hooli_topic")
 
-    // main stream
-    val maxBulkSize = 100000
-
-    val kafkaOffsetCommitStreamContext = KafkaOffsetCommitStream(
-      bufferSize = maxBulkSize,
-      parallelism = 3,
-      executionContext
-    ).stream.run()
-
     val esSink = ElasticsearchBulkRequestSink(
       esClient,
       maxBulkSize = 100000,
-      kafkaOffsetCommitStreamContext,
       executionContext
     )
 
