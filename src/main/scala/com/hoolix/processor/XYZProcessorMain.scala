@@ -1,23 +1,14 @@
 package com.hoolix.processor
 
 import java.io.File
-import java.net.InetAddress
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
-import akka.kafka.ConsumerSettings
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Keep
-import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
-import com.hoolix.processor.sources.KafkaSource
+import com.hoolix.processor.modules.{ElasticsearchClient, KafkaConsumerSettings}
 import com.hoolix.processor.streams.KafkaToEsStream
 import com.typesafe.config.ConfigFactory
-import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
-import org.elasticsearch.common.settings.Settings
-import org.elasticsearch.common.transport.InetSocketTransportAddress
-import org.elasticsearch.transport.client.PreBuiltTransportClient
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -30,31 +21,18 @@ import scala.concurrent.duration._
 object XYZProcessorMain extends App {
 
   override def main(args: Array[String]): Unit = {
-    val config = ConfigFactory.parseFile(new File("conf/application.conf"))
+    implicit val config = ConfigFactory.parseFile(new File("conf/application.conf"))
 
     implicit val system = ActorSystem("xyz-processor", config)
     implicit val materializer = ActorMaterializer()
-
     implicit val executionContext = system.dispatchers.lookup("xyz-dispatcher")
 
-    //TODO: es client settings in application.conf
-    val esClient = new PreBuiltTransportClient(Settings.EMPTY)
-      .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("0.0.0.0"), 9300))
-
-
-    //TODO: kafka consumer settings in application.conf
-    val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new StringDeserializer)
-      .withBootstrapServers("0.0.0.0:9092")
-      .withGroupId("xyz-processor")
-      .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
-
-    val kafkaTopics = Set("hooli_topic")
     val stream = KafkaToEsStream(
       parallelism = 5,
       maxSize = 100000,
-      esClient,
-      consumerSettings,
-      kafkaTopics,
+      ElasticsearchClient(),
+      KafkaConsumerSettings(),
+      Set("hooli_topic"),
       executionContext
     )
 
