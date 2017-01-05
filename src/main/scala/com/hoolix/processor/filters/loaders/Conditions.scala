@@ -1,8 +1,7 @@
-package com.hoolix.pipeline.dynamic
+package com.hoolix.processor.filters.loaders
 
 import java.util.regex.{Matcher, Pattern}
-
-import com.hoolix.pipeline.dynamic.ConditionOp.ConditionOp
+import com.hoolix.processor.filters.loaders.ConditionOp.ConditionOp
 import org.slf4j.LoggerFactory
 
 object ConditionOp extends Enumeration {
