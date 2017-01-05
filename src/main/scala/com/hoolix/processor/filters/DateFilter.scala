@@ -1,9 +1,9 @@
-package com.hoolix.pipeline.filter
+package com.hoolix.processor.filters
 
 import java.text.SimpleDateFormat
 import java.util.{Date, Locale, TimeZone}
 
-import com.hoolix.pipeline.core._
+import com.hoolix.processor.models.{Event, IntermediateEvent}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.chrono.ISOChronology
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
@@ -26,7 +26,7 @@ object DateFilter{
       .withChronology(ISOChronology.getInstanceUTC())   //TODO ?
   }
 }
-case class DateFilter(cfg:FilterConfig,
+case class DateFilter(targetField: String,
                       formats : Seq[(String,String,String)] = Seq(),
                       dest_format_triple:(String,String,String) = ("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "UTC", "en")
                      ) extends Filter{
@@ -85,24 +85,33 @@ case class DateFilter(cfg:FilterConfig,
     ret
   }
 
-  override def handle(ctx: Context): Either[Throwable, Iterable[(String,Any)]] = {
-    //convert timestamp to @timestamp
-    ctx.get(cfg.target) match {
-      case Some(message_timestamp) =>  parse(message_timestamp.trim) match {
-        case Some(datetime) =>
-          ctx.record_timestamp = datetime
-          Right(
-            Seq(
-              ("@timestamp", DateFilter.dest_format.print(datetime)),
-              ("timestamp", dest_format.print(datetime))
-            )
-          )
-        case None =>
-          ctx.metric(MetricTypes.metric_timestamp_fail)
-          logger.warn("unknown timestamp: "+ message_timestamp + formats)
-          Left(new Exception("unknown timestamp: "+ message_timestamp + formats))
-      }
-      case None => Left(null)
-    }
+  override def handle(event: Event): Event = {
+    val payload = event.toPayload
+    payload.put("event_timestamp", parse(payload.get(targetField).asInstanceOf[String]))
+    new IntermediateEvent(payload)
+
+
+
+//    if ( )
+//
+//
+//    //convert timestamp to @timestamp
+//    payload.get(targetField) match {
+//      case Some(message_timestamp) =>  parse(message_timestamp.trim) match {
+//        case Some(datetime) =>
+//          ctx.record_timestamp = datetime
+//          Right(
+//            Seq(
+//              ("@timestamp", DateFilter.dest_format.print(datetime)),
+//              ("timestamp", dest_format.print(datetime))
+//            )
+//          )
+//        case None =>
+//          ctx.metric(MetricTypes.metric_timestamp_fail)
+//          logger.warn("unknown timestamp: "+ message_timestamp + formats)
+//          Left(new Exception("unknown timestamp: "+ message_timestamp + formats))
+//      }
+//      case None => Left(null)
+//    }
   }
 }

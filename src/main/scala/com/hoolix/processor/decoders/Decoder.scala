@@ -9,10 +9,10 @@ trait Decoder {
 object Decoder {
    def getDecoder(name:String) : Decoder = {
     name match {
-      case "json"     => JsonDecoder()
-      case "xyz-json" => JsonDecoder()
+//      case "json"     => JsonDecoder()
+//      case "xyz-json" => JsonDecoder()
       case "xyz-line" => XYZLineDecoder()
-      case "raw-line" => RawLineDecoder()
+//      case "raw-line" => RawLineDecoder()
       case "filebeat" => FileBeatDecoder()
     }
   }

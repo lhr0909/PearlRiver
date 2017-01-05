@@ -1,5 +1,4 @@
-package com.hoolix.pipeline.util
-
+package com.hoolix.processor.utils
 import java.sql.{Connection, DriverManager}
 
 import com.avaje.ebean.EbeanServerFactory

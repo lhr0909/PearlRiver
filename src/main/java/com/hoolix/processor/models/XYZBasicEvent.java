@@ -26,7 +26,7 @@ public class XYZBasicEvent extends Event implements Serializable {
 
     @Override
     public String getIndexName() {
-        return getToken() + ElasticSearchSinkAble.INDEX_NAME_SEPARATOR + getType();
+        return getToken() + Event.INDEX_NAME_SEPARATOR + getType();
     }
 
     @Override

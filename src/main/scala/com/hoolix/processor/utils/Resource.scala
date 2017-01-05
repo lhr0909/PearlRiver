@@ -1,5 +1,4 @@
-package com.hoolix.pipeline.util
-
+package com.hoolix.processor.utils
 object Resource {
   val Geolite2Db       = "GeoLite2-City.mmdb"
   val PatternFile      = "patterns"

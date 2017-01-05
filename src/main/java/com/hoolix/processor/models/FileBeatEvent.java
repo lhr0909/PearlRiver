@@ -1,11 +1,8 @@
 package com.hoolix.processor.models;
 
 import akka.kafka.ConsumerMessage;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormat;
@@ -21,8 +18,6 @@ import java.util.Map;
  * Hoolix 2017
  * Created by simon on 1/1/17.
  */
-@AllArgsConstructor
-// @NoArgsConstructor
 @Getter
 public class FileBeatEvent extends Event implements Serializable {
     private static final long serialVersionUID = -1061534942493817146L;
@@ -53,43 +48,24 @@ public class FileBeatEvent extends Event implements Serializable {
 
     FileBeatEvent(ConsumerMessage.CommittableOffset committableOffset, String json) {
         super(committableOffset);
+
         FileBeatEvent event = null;
-        JsonNode jsonNode = null;
         try {
             event = objectMapper.readValue(json, FileBeatEvent.class);
-
-            jsonNode = objectMapper.readTree(json);
-
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         this.timestamp = event.getTimestamp();
-        this.beat = event.beat;
-        this.fields = event.fields;
-        this.inputType = event.inputType;
-        this.message = event.message;
-        this.offset = event.offset;
-        this.source = event.source;
-        this.tags = event.tags;
-        this.type = event.type;
-
-        // this.timestamp = jsonNode.get("timestamp").asText();
-        // this.beat = objectMapper.readValue(jsonNode.get("beat").asText(), Beat.class);
-        // this.fields = jsonNode.get("fields").;
-        // this.inputType;
-        // this.message;
-        // this.offset;
-        // this.source;
-        // this.tags;
-        // this.type;
+        this.beat = event.getBeat();
+        this.fields = event.getFields();
+        this.inputType = event.getInputType();
+        this.message = event.getMessage();
+        this.offset = event.getOffset();
+        this.source = event.getSource();
+        this.tags = event.getTags();
+        this.type = event.getType();
     }
-
-    // public static FileBeatEvent fromJsonString(ConsumerMessage.CommittableOffset committableOffset, String json) throws IOException {
-    //     new Event()
-    //
-    //     FileBeatEvent event = objectMapper.readValue(json, FileBeatEvent.class);
-    //     new FileBeatEvent(e)
-    // }
 
     @Override
     public String getIndexName() {

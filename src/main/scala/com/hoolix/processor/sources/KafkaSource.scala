@@ -12,11 +12,7 @@ import scala.concurrent.Future
   * Hoolix 2017
   * Created by simon on 1/1/17.
   */
-case class KafkaSource(
-                      parallelism: Int,
-                      kafkaConsumerSettings: ConsumerSettings[Array[Byte], String],
-                      kafkaTopics: String*
-                      ) {
+object KafkaSource {
 
   def convertToEvent(committableMessage: CommittableMessage[Array[Byte], String]): Future[Event] = {
 //    val Event = new EventBuilder()
@@ -28,9 +24,12 @@ case class KafkaSource(
     Future.successful(event)
   }
 
-  def toSource: Source[Event, Consumer.Control] = {
-    Consumer.committableSource(kafkaConsumerSettings, Subscriptions.topics(kafkaTopics.toSet))
-      .mapAsync(parallelism)(convertToEvent)
+  def apply(
+             parallelism: Int,
+             kafkaConsumerSettings: ConsumerSettings[Array[Byte], String],
+             kafkaTopics: Set[String]
+           ): Source[Event, Consumer.Control] = {
+    Consumer.committableSource(kafkaConsumerSettings, Subscriptions.topics(kafkaTopics))
+      .mapAsync(parallelism)(KafkaSource.convertToEvent)
   }
-
 }

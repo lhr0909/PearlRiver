@@ -1,5 +1,4 @@
-package com.hoolix.pipeline.util
-
+package com.hoolix.processor.utils
 import javax.persistence.PersistenceException
 
 import com.avaje.ebean.{Ebean, EbeanServer, EbeanServerFactory}

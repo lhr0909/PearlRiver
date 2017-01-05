@@ -1,11 +1,11 @@
-package com.hoolix.pipeline.filter
+package com.hoolix.processor.filters
 
 import java.util.regex.Pattern
 
-import com.hoolix.pipeline.core.{Context, Filter, FilterConfig, PreviewContext}
+import com.hoolix.processor.models.{Event, IntermediateEvent}
 import eu.bitwalker.useragentutils.UserAgent
 
-case class HttpAgentFilter(cfg: FilterConfig) extends Filter{
+case class HttpAgentFilter(targetField: String) extends Filter{
   /**
     * @param ctx
     * @return
@@ -13,26 +13,31 @@ case class HttpAgentFilter(cfg: FilterConfig) extends Filter{
     * false parse fail
     * None  nothing to do
     */
-  override def handle(ctx: Context): Either[Throwable, Iterable[(String, Any)]] = {
+  override def handle(event: Event): Event = {
+    val payload = event.toPayload
 
-    val agent_str = ctx.get(cfg.target) match {
-      case Some("")  => return Left(null)
-      case Some("-") => return Left(null)
-      case None      => return Left(null)
+
+    val agent_str = Some(payload.get(targetField).asInstanceOf[String]) match {
+      case Some("")  => ""
+      case Some("-") => ""
+//      case None      => ""
       case Some(s)   => s
     }
 
-    if (agent_str == "" || agent_str == "-")
-      return Left(null)
+//    if (agent_str == "" || agent_str == "-")
+//      return Left(null)
 
     val (browser, os) = parse(agent_str)
 
-    Right(
-      Seq(
-        ("agent_browser", browser),
-        ("agent_os", os)
-      )
-    )
+//    Right(
+//      Seq(
+//        ("agent_browser", browser),
+//        ("agent_os", os)
+//      )
+//    )
+    payload.put("agent_browser", browser)
+    payload.put("agent_os", os)
+    new IntermediateEvent(payload)
   }
 
   def browser_tag = Seq(

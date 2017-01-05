@@ -1,10 +1,9 @@
-package com.hoolix.pipeline.output.es
-
+package com.hoolix.processor.utils
 import java.io.FileNotFoundException
 
 import com.hoolix.pipeline.core.{Config, Context, PipelineTypeConfig}
-import com.hoolix.pipeline.util.TimeRotationUtil
 import com.hoolix.pipeline.util.{ESMappingBuilder, TimeRotationUtil, Utils}
+import com.hoolix.processor.utils.TimeRotationUtil
 import org.elasticsearch.ResourceAlreadyExistsException
 import org.elasticsearch.action.admin.indices.alias.{IndicesAliasesAction, IndicesAliasesRequestBuilder}
 import org.elasticsearch.client.transport.TransportClient

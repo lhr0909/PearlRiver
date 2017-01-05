@@ -1,31 +1,28 @@
-package com.hoolix.pipeline.filter
+package com.hoolix.processor.filters
 
-import com.hoolix.pipeline.core.{Context, Filter, FilterConfig}
+import com.hoolix.processor.models.{Event, IntermediateEvent}
 import scala.util.Random
 
 /**
   * Created by peiyuchao on 16/8/16.
   */
 
-case class RegexBasedAnomalyDetectionFilter(cfg: FilterConfig, params: Seq[Seq[String]]) extends Filter {
-  override def handle(ctx: Context): Either[Throwable, Iterable[(String,Any)]] = {
-    Right(
-      params.flatMap { param => {
-        val Seq(field, value, anomaly_field, anomaly_value) = param
-        if (ctx.get((cfg.pool, field), "") matches value) {
-          Some((anomaly_field, anomaly_value))
-        }
-        else {
-          None
-        }
-      }}
-    )
+case class RegexBasedAnomalyDetectionFilter(params: Seq[Seq[String]]) extends Filter {
+  override def handle(event: Event): Event = {
+    val payload = event.toPayload
+    params.foreach((param) => {
+      val Seq(field, value, anomaly_field, anomaly_value) = param
+      if (payload.get(field).asInstanceOf[String] matches value) {
+        payload.put(anomaly_field, anomaly_value)
+      }
+    })
+    new IntermediateEvent(payload)
   }
 }
 
-case class RandomAnomalyDetectionFilter(cfg: FilterConfig, percentage: Double, distribution: Seq[Seq[String]], anomalies: Seq[String]) extends Filter {
-  var bounds: Seq[Tuple3[String, Int, Int]] = {
-    var tempBounds: Seq[Tuple3[String, Int, Int]] = Seq()
+case class RandomAnomalyDetectionFilter(percentage: Double, distribution: Seq[Seq[String]], anomalies: Seq[String]) extends Filter {
+  var bounds: Seq[(String, Int, Int)] = {
+    var tempBounds: Seq[(String, Int, Int)] = Seq()
     for (i <- distribution.indices) {
       var lowerBound: Int = 0
       var upperBound: Int = 0
@@ -39,27 +36,22 @@ case class RandomAnomalyDetectionFilter(cfg: FilterConfig, percentage: Double, d
     tempBounds
   }
 
-  override def handle(ctx: Context): Either[Throwable, Iterable[(String, Any)]] = {
-    Right(
-      anomalies.flatMap { anomaly => {
-        if (new Random().nextDouble() < percentage / 100) {
-          var level: String = null
-          val rand = new Random().nextInt(100)
-          for (i <- bounds.indices) {
-            if (rand >= bounds(i)._2 && rand < bounds(i)._3) {
-              level = bounds(i)._1
-              // TODO break
-            }
+  override def handle(event: Event): Event = {
+    val payload = event.toPayload
+    anomalies.foreach((anomaly) => {
+      if (new Random().nextDouble() < percentage / 100) {
+        var level: String = null
+        val rand = new Random().nextInt(100)
+        for (i <- bounds.indices) {
+          if (rand >= bounds(i)._2 && rand < bounds(i)._3) {
+            level = bounds(i)._1
+            // TODO break
           }
-          if (level != null)
-            Some((anomaly, level))
-          else
-            None
         }
-        else
-          None
+        if (level != null)
+          payload.put(anomaly, level)
       }
-      }
-    )
+    })
+    new IntermediateEvent(payload)
   }
 }

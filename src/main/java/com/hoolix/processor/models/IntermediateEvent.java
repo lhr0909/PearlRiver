@@ -22,9 +22,9 @@ public class IntermediateEvent extends Event implements Serializable {
         Long eventTimestamp = ((Long) payload.getOrDefault("event_timestamp", null));
         // TODO 日期轮转
         if (eventTimestamp != null) {
-            return token + ElasticSearchSinkAble.INDEX_NAME_SEPARATOR + type + eventTimestamp + uploadTimestamp;
+            return token + Event.INDEX_NAME_SEPARATOR + type + eventTimestamp + uploadTimestamp;
         } else {
-            return token + ElasticSearchSinkAble.INDEX_NAME_SEPARATOR + type + ElasticSearchSinkAble.INDEX_NAME_WILDCARD + uploadTimestamp;
+            return token + Event.INDEX_NAME_SEPARATOR + type + Event.INDEX_NAME_WILDCARD + uploadTimestamp;
         }
     }
 

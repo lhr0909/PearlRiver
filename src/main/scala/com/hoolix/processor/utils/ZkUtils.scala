@@ -1,5 +1,4 @@
-package com.hoolix.pipeline.util
-
+package com.hoolix.processor.utils
 import java.net.InetAddress
 
 import com.hoolix.pipeline.core.Config

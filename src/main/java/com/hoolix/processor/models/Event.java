@@ -1,9 +1,7 @@
 package com.hoolix.processor.models;
 
 import akka.kafka.ConsumerMessage;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import org.elasticsearch.action.index.IndexRequest;
 import java.util.Map;
 
@@ -11,8 +9,6 @@ import java.util.Map;
  * Hoolix 2017
  * Created by simon on 1/1/17.
  */
-@AllArgsConstructor
-@NoArgsConstructor
 @Getter
 public abstract class Event {
     private static final long serialVersionUID = 667291746043562470L;
@@ -21,11 +17,15 @@ public abstract class Event {
     public static final String INDEX_NAME_SEPARATOR = ".";
     public static final String INDEX_NAME_WILDCARD = "_";
 
-    private final ConsumerMessage.CommittableOffset committableOffset = null;
+    private final ConsumerMessage.CommittableOffset committableOffset;
 
-    // Event(ConsumerMessage.CommittableOffset committableOffset) {
-    //     this.committableOffset = committableOffset;
-    // }
+    Event() {
+        committableOffset = null;
+    }
+
+    Event(ConsumerMessage.CommittableOffset committableOffset) {
+        this.committableOffset = committableOffset;
+    }
 
     private String getId() {
         return getTopic() + "." + Integer.toString(getPartition()) + "." + Long.toString(getOffset());

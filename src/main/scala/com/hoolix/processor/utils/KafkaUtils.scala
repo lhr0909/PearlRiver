@@ -1,5 +1,4 @@
-package com.hoolix.pipeline.util
-
+package com.hoolix.processor.utils
 import com.hoolix.pipeline.core.Config
 import kafka.common.TopicAndPartition
 

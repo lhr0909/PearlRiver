@@ -1,5 +1,4 @@
-package com.hoolix.pipeline.util
-
+package com.hoolix.processor.utils
 import org.json4s.{DefaultFormats, Extraction, JValue}
 import org.json4s.JsonAST.JObject
 import org.json4s.JsonAST.JNothing

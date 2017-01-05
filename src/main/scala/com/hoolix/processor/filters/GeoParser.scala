@@ -1,17 +1,19 @@
-package com.hoolix.pipeline.filter
+package com.hoolix.processor.filters
 
 import java.io.File
 import java.net.InetAddress
 
-import com.hoolix.pipeline.core.{Context, Filter, FilterConfig, MetricTypes}
 import com.hoolix.pipeline.util.Utils
+import com.hoolix.processor.models.{Event, IntermediateEvent}
 import com.maxmind.db.CHMCache
 import com.maxmind.geoip2.DatabaseReader
 
-case class GeoParser(cfg:FilterConfig, geofile:String = "") extends Filter{
-    lazy val reader = new DatabaseReader.Builder(Utils.resolve_file(geofile, file_resolvers).openStream()).withCache(new CHMCache()).build();
+case class GeoParser(targetField: String, geofile:String = "") extends Filter{
+//    lazy val reader = new DatabaseReader.Builder(Utils.resolve_file(geofile, file_resolvers).openStream()).withCache(new CHMCache()).build();
+  lazy val reader = new DatabaseReader.Builder(Utils.resolve_file(geofile, Seq()).openStream()).withCache(new CHMCache()).build();
 
-    def parseResp(ip:String) = {
+
+  def parseResp(ip:String) = {
         val address = InetAddress.getByName(ip)
         reader.city(address)
     }
@@ -30,52 +32,36 @@ case class GeoParser(cfg:FilterConfig, geofile:String = "") extends Filter{
         }
     }
 
-  /*
-    public static Optional<Tuple3<String,String,String>> getCityCn(String ip) {
-      Optional<CityResponse> resp_opt = getGeoResponse(ip);
-      if (resp_opt.isPresent()) {
-        CityResponse resp = resp_opt.get();
+    override def handle(event: Event): Event = {
+      val payload = event.toPayload
+      val ip = payload.get(targetField).asInstanceOf[String]
 
-        String name = resp.getCity().getNames().get("zh-CN");
-        //如果没有中文名, 查询其他名字
-        if (name == null)
-          name = resp.getCity().getName();
+      val resp = parseResp(ip)
+      payload.put("city", resp.getCity.getName)
+      payload.put("country", resp.getCountry.getName)
+      payload.put("continent", resp.getContinent.getName)
 
-        //如果没有名字, 经纬度也是瞎扯, 不可信
-        if (name == null) {
-          Logger.debug("no name for: "+ ip+" " + resp.getLocation().getLatitude()+"," + resp.getLocation().getLatitude());
-          return Optional.empty();
-        }
-        return Optional.of(new Tuple3(name, resp.getLocation().getLongitude() + "", resp.getLocation().getLatitude() + ""));
-      }
-      return Optional.empty();
-    }
-  }
-  */
-    override def handle(ctx: Context): Either[Throwable, Iterable[(String,Any)]] = {
-
-      val ip = ctx.get(cfg.target,null)
-
-      try {
-        ip match {
-          case null => Left(null)
-          case _ => parseResp(ip) match {
-            case null =>
-              ctx.metric(MetricTypes.metric_geo_fail)
-              Left(new Exception("error"))
-            case resp =>
-              Right(
-                Seq(
-                  ("city", resp.getCity.getName),
-                  ("country", resp.getCountry.getName),
-                  ("continent", resp.getContinent.getName)
-                )
-              )
-          }
-        }
-      } catch {
-        case e : com.maxmind.geoip2.exception.AddressNotFoundException =>
-          Left(e)
-      }
+      new IntermediateEvent(payload)
+//      try {
+//        ip match {
+//          case null => Left(null)
+//          case _ => parseResp(ip) match {
+//            case null =>
+//              ctx.metric(MetricTypes.metric_geo_fail)
+//              Left(new Exception("error"))
+//            case resp =>
+//              Right(
+//                Seq(
+//                  ("city", resp.getCity.getName),
+//                  ("country", resp.getCountry.getName),
+//                  ("continent", resp.getContinent.getName)
+//                )
+//              )
+//          }
+//        }
+//      } catch {
+//        case e : com.maxmind.geoip2.exception.AddressNotFoundException =>
+//          Left(e)
+//      }
     }
 }

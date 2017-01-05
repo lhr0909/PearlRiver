@@ -1,6 +1,6 @@
 package com.hoolix.processor.decoders
 
-import com.hoolix.processor.models.{Event, XYZBasicEvent, XYZLineEvent}
+import com.hoolix.processor.models.{Event, XYZBasicEvent, LineEvent}
 import org.slf4j.LoggerFactory
 
 /**
@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory
 case class XYZLineDecoder() extends Decoder {
   lazy val logger = LoggerFactory.getLogger(this.getClass)
   override def decode(event: Event): XYZBasicEvent = {
-    val payload = event.asInstanceOf[XYZLineEvent].toPayload
+    val payload = event.asInstanceOf[LineEvent].toPayload
     val message = payload.get("message").asInstanceOf[String]
     val segments = message.split(" \\|\\| ", 2)
     if (segments.size != 2) {

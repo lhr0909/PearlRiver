@@ -1,4 +1,4 @@
-package com.hoolix.pipeline.util
+package com.hoolix.processor.utils
 
 import java.io._
 import java.net.{URI, URL}
