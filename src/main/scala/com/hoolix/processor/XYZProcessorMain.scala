@@ -5,7 +5,12 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
+import com.hoolix.processor.http.routes.OfflineQueryRoutes
 import com.hoolix.processor.modules.{ElasticsearchClient, KafkaConsumerSettings}
 import com.hoolix.processor.streams.KafkaToEsStream
 import com.typesafe.config.ConfigFactory
@@ -27,28 +32,57 @@ object XYZProcessorMain extends App {
     implicit val materializer = ActorMaterializer()
     implicit val executionContext = system.dispatchers.lookup("xyz-dispatcher")
 
+    val esClient = ElasticsearchClient()
+
     val stream = KafkaToEsStream(
       parallelism = 5,
       maxSize = 100000,
-      ElasticsearchClient(),
+      esClient,
       KafkaConsumerSettings(),
       Set("hooli_topic"),
       executionContext
     )
 
-    val (esBulkProcessor, kafkaControl) = stream.run()
+    val httpConfig = config.getConfig("http")
+
+    val route: Route = pathSingleSlash {
+      complete("后端程序还活着！")
+    } ~ OfflineQueryRoutes() ~
+    path("start") {
+      val (esBulkProcessor, kafkaControl) = stream.run()
+
+      scala.sys.addShutdownHook {
+        val terminateSeconds = 30
+        println(s"Shutting down ES Bulk Processor in $terminateSeconds seconds... - " + Instant.now)
+        esBulkProcessor.awaitClose(terminateSeconds, TimeUnit.SECONDS)
+        println(s"Shutting down Kafka Source in $terminateSeconds seconds... - " + Instant.now)
+        Await.result(kafkaControl.shutdown, terminateSeconds.seconds)
+        println(s"Shutting down Akka Actor System now - " + Instant.now)
+        system.terminate()
+      }
+      complete("pipeline started")
+    }
+
+
+    val bindAddress = httpConfig.getString("bind-address")
+    val bindPort = httpConfig.getInt("bind-port")
+    val httpBind = Http().bindAndHandle(route, bindAddress, bindPort)
+
+    httpBind.onComplete { _ =>
+      println(s"HTTP Server started at $bindAddress:$bindPort !")
+    }
 
     //TODO: improve logging (use log4j2)
     scala.sys.addShutdownHook {
-      val terminateSeconds = 30
-      println(s"Shutting down ES Bulk Processor in $terminateSeconds seconds... - " + Instant.now)
-      esBulkProcessor.awaitClose(terminateSeconds, TimeUnit.SECONDS)
-      println(s"Shutting down Kafka Source in $terminateSeconds seconds... - " + Instant.now)
-      Await.result(kafkaControl.shutdown, terminateSeconds.seconds)
-      println(s"Shutting down Akka Actor System in $terminateSeconds seconds... - " + Instant.now)
-      system.terminate()
-      Await.result(system.whenTerminated, terminateSeconds.seconds)
-      println("Terminated safely. Cheers - " + Instant.now)
+      val terminateSeconds = 120
+      println(s"Shutting down HTTP service in $terminateSeconds seconds..." + Instant.now)
+      httpBind
+        .flatMap(_.unbind()) // trigger unbinding from the port
+        .onComplete { _ =>
+          println(s"Waiting for Akka Actor System to shut down in $terminateSeconds seconds... - " + Instant.now)
+          Await.result(system.whenTerminated, terminateSeconds.seconds)
+          println("Terminated safely. Cheers - " + Instant.now)
+      }
     }
   }
 }
