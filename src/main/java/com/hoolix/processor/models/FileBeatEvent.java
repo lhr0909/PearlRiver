@@ -1,15 +1,15 @@
 package com.hoolix.processor.models;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import akka.kafka.ConsumerMessage;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.elasticsearch.action.index.IndexRequest;
+import lombok.NoArgsConstructor;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -22,8 +22,9 @@ import java.util.Map;
  * Created by simon on 1/1/17.
  */
 @AllArgsConstructor
+// @NoArgsConstructor
 @Getter
-public class FileBeatEvent implements Serializable, Event, ESSink {
+public class FileBeatEvent extends Event implements Serializable {
     private static final long serialVersionUID = -1061534942493817146L;
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final DateTimeFormatter dateTimeFormatter = DateTimeFormat
@@ -38,7 +39,6 @@ public class FileBeatEvent implements Serializable, Event, ESSink {
 
     private final Map<String, String> fields;
 
-    @JsonProperty("input_type")
     private final String inputType;
 
     private final String message;
@@ -51,17 +51,49 @@ public class FileBeatEvent implements Serializable, Event, ESSink {
 
     private final String type;
 
-    public static FileBeatEvent fromJsonString(String json) throws IOException {
-        return objectMapper.readValue(json, FileBeatEvent.class);
+    FileBeatEvent(ConsumerMessage.CommittableOffset committableOffset, String json) {
+        super(committableOffset);
+        FileBeatEvent event = null;
+        JsonNode jsonNode = null;
+        try {
+            event = objectMapper.readValue(json, FileBeatEvent.class);
+
+            jsonNode = objectMapper.readTree(json);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        this.timestamp = event.getTimestamp();
+        this.beat = event.beat;
+        this.fields = event.fields;
+        this.inputType = event.inputType;
+        this.message = event.message;
+        this.offset = event.offset;
+        this.source = event.source;
+        this.tags = event.tags;
+        this.type = event.type;
+
+        // this.timestamp = jsonNode.get("timestamp").asText();
+        // this.beat = objectMapper.readValue(jsonNode.get("beat").asText(), Beat.class);
+        // this.fields = jsonNode.get("fields").;
+        // this.inputType;
+        // this.message;
+        // this.offset;
+        // this.source;
+        // this.tags;
+        // this.type;
     }
+
+    // public static FileBeatEvent fromJsonString(ConsumerMessage.CommittableOffset committableOffset, String json) throws IOException {
+    //     new Event()
+    //
+    //     FileBeatEvent event = objectMapper.readValue(json, FileBeatEvent.class);
+    //     new FileBeatEvent(e)
+    // }
 
     @Override
     public String getIndexName() {
-        return fields.getOrDefault("token", "_default_") + "." + getType();
-    }
-    @Override
-    public IndexRequest toIndexRequest() {
-        return new IndexRequest(getIndexName(), getType());
+        return null; // TODO
     }
 
     @Override
@@ -70,6 +102,7 @@ public class FileBeatEvent implements Serializable, Event, ESSink {
         payload.put("timestamp", dateTimeFormatter.parseMillis(timestamp));
         payload.put("beat", beat);
         payload.put("fields", fields);
+        payload.put("inputType", inputType);
         payload.put("message", message);
         payload.put("offset", offset);
         payload.put("source", source);

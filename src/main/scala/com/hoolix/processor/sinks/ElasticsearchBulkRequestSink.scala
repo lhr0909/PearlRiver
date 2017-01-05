@@ -3,7 +3,7 @@ package com.hoolix.processor.sinks
 import akka.NotUsed
 import akka.kafka.ConsumerMessage.CommittableOffsetBatch
 import akka.stream.scaladsl.{Flow, Sink}
-import com.hoolix.processor.models.KafkaEvent
+import com.hoolix.processor.models.Event
 import org.elasticsearch.action.bulk.BulkProcessor.Listener
 import org.elasticsearch.action.bulk.{BackoffPolicy, BulkProcessor, BulkRequest, BulkResponse}
 import org.elasticsearch.client.transport.TransportClient
@@ -24,8 +24,8 @@ case class ElasticsearchBulkRequestSink(
                                        ) {
 
   var bulking: Boolean = false
-  var bulkBuffer: Seq[KafkaEvent] = Seq()
-  var bulkingBuffer: Seq[KafkaEvent] = Seq()
+  var bulkBuffer: Seq[Event] = Seq()
+  var bulkingBuffer: Seq[Event] = Seq()
   var bulkRequestListener: Listener = _
 
   val bulkProcessor: BulkProcessor = BulkProcessor.builder(elasticsearchClient, new Listener {
@@ -60,15 +60,15 @@ case class ElasticsearchBulkRequestSink(
     )
     .build()
 
-  def startingFlow: Flow[KafkaEvent, Seq[KafkaEvent], NotUsed] = {
+  def startingFlow: Flow[Event, Seq[Event], NotUsed] = {
     if (maxBulkSize < 0) {
-      Flow[KafkaEvent].conflateWithSeed(Seq(_))(_ :+ _)
+      Flow[Event].conflateWithSeed(Seq(_))(_ :+ _)
     } else {
-      Flow[KafkaEvent].batch(maxBulkSize, Seq(_))(_ :+ _)
+      Flow[Event].batch(maxBulkSize, Seq(_))(_ :+ _)
     }
   }
 
-  def processKafkaEvent(event: KafkaEvent): Unit = {
+  def processEvent(event: Event): Unit = {
     bulkProcessor.add(event.toIndexRequest.source(event.toPayload))
     if (!bulking) {
       if (bulkingBuffer.nonEmpty) {
@@ -81,12 +81,12 @@ case class ElasticsearchBulkRequestSink(
     }
   }
 
-  def toSink: Sink[KafkaEvent, NotUsed] = {
+  def toSink: Sink[Event, NotUsed] = {
     val flow = startingFlow.mapConcat(_.to[immutable.Seq])
     if (concurrentRequests < 1) {
-      flow.to(Sink.foreach(processKafkaEvent))
+      flow.to(Sink.foreach(processEvent))
     } else {
-      flow.to(Sink.foreachParallel(concurrentRequests)(processKafkaEvent))
+      flow.to(Sink.foreachParallel(concurrentRequests)(processEvent))
     }
   }
 }

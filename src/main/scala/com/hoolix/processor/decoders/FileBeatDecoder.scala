@@ -1,12 +1,14 @@
 package com.hoolix.processor.decoders
 
 import com.hoolix.processor.models.{Event, FileBeatEvent, XYZBasicEvent}
+import org.slf4j.LoggerFactory
 
 /**
   * Hoolix 2016
   * Created by simon on 12/8/16.
   */
 case class FileBeatDecoder() extends Decoder {
+  lazy val logger = LoggerFactory.getLogger(this.getClass)
   override def decode(event: Event): XYZBasicEvent = {
     val payload = event.asInstanceOf[FileBeatEvent].toPayload
     new XYZBasicEvent(

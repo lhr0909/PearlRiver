@@ -11,7 +11,7 @@ import java.util.Map;
  */
 @AllArgsConstructor
 @Getter
-public class IntermediateEvent implements Serializable, Event, ESSink {
+public class IntermediateEvent extends Event implements Serializable {
     private final Map<String, Object> payload;
 
     @Override
@@ -22,9 +22,9 @@ public class IntermediateEvent implements Serializable, Event, ESSink {
         Long eventTimestamp = ((Long) payload.getOrDefault("event_timestamp", null));
         // TODO 日期轮转
         if (eventTimestamp != null) {
-            return token + ESSink.INDEX_NAME_SEPARATOR + type + eventTimestamp + uploadTimestamp;
+            return token + ElasticSearchSinkAble.INDEX_NAME_SEPARATOR + type + eventTimestamp + uploadTimestamp;
         } else {
-            return token + ESSink.INDEX_NAME_SEPARATOR + type + ESSink.INDEX_NAME_WILDCARD + uploadTimestamp;
+            return token + ElasticSearchSinkAble.INDEX_NAME_SEPARATOR + type + ElasticSearchSinkAble.INDEX_NAME_WILDCARD + uploadTimestamp;
         }
     }
 

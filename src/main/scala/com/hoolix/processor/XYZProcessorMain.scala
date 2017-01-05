@@ -8,6 +8,9 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{ActorSystem, Props}
 import akka.kafka.ConsumerSettings
 import akka.stream.ActorMaterializer
+import com.hoolix.processor.decoders.FileBeatDecoder
+import com.hoolix.processor.filters.Filter
+import com.hoolix.processor.flows.{DecodeFlow, FilterFlow}
 import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
 import com.hoolix.processor.sources.KafkaSource
 import com.typesafe.config.ConfigFactory
@@ -47,8 +50,12 @@ object XYZProcessorMain extends App {
       .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
     val kafkaSource = KafkaSource(20, consumerSettings, "hooli_topic")
 
+    val decodeFlow = DecodeFlow(20, FileBeatDecoder())
+    val filterFlow = FilterFlow(20, Seq[Filter]())
+
     // main stream
-    val mainStream = kafkaSource.toSource.runWith(esSink.toSink)
+    val mainStream = kafkaSource.toSource.via(decodeFlow.toFlow).via(filterFlow.toFlow).toMat(esSink.toSink)
+//      .runWith(esSink.toSink)
 
     //TODO: improve logging
     scala.sys.addShutdownHook {

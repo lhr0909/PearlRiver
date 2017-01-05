@@ -14,7 +14,7 @@ import java.util.Map;
  */
 @AllArgsConstructor
 @Getter
-public class XYZBasicEvent implements Serializable, Event, ESSink {
+public class XYZBasicEvent extends Event implements Serializable {
     private final String token;
     private final String type;
     private final List<String> tags;
@@ -26,7 +26,7 @@ public class XYZBasicEvent implements Serializable, Event, ESSink {
 
     @Override
     public String getIndexName() {
-        return getToken() + ESSink.INDEX_NAME_SEPARATOR + getType();
+        return getToken() + ElasticSearchSinkAble.INDEX_NAME_SEPARATOR + getType();
     }
 
     @Override

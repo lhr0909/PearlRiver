@@ -4,8 +4,7 @@ import akka.kafka.ConsumerMessage.CommittableMessage
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.Source
-import com.hoolix.processor.models.builders.KafkaEventBuilder
-import com.hoolix.processor.models.{FileBeatEvent, KafkaEvent}
+import com.hoolix.processor.models.{FileBeatEvent, Event}
 
 import scala.concurrent.Future
 
@@ -19,17 +18,19 @@ case class KafkaSource(
                       kafkaTopics: String*
                       ) {
 
-  def convertToKafkaEvent(committableMessage: CommittableMessage[Array[Byte], String]): Future[KafkaEvent] = {
-    val kafkaEvent = new KafkaEventBuilder()
-      .setCommittableOffset(committableMessage.committableOffset)
-      .setEvent(FileBeatEvent.fromJsonString(committableMessage.record.value))
-      .build()
-    Future.successful(kafkaEvent)
+  def convertToEvent(committableMessage: CommittableMessage[Array[Byte], String]): Future[Event] = {
+//    val Event = new EventBuilder()
+//      .setCommittableOffset(committableMessage.committableOffset)
+//      .setEvent(FileBeatEvent.fromJsonString(committableMessage.record.value))
+//      .build()
+//    Event()
+    val event = new FileBeatEvent(committableMessage.committableOffset, committableMessage.record.value)
+    Future.successful(event)
   }
 
-  def toSource: Source[KafkaEvent, Consumer.Control] = {
+  def toSource: Source[Event, Consumer.Control] = {
     Consumer.committableSource(kafkaConsumerSettings, Subscriptions.topics(kafkaTopics.toSet))
-      .mapAsync(parallelism)(convertToKafkaEvent)
+      .mapAsync(parallelism)(convertToEvent)
   }
 
 }
