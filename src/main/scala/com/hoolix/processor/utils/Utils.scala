@@ -5,8 +5,6 @@ import java.net.{URI, URL}
 import java.nio.charset.StandardCharsets
 import java.util.Properties
 
-import com.hoolix.pipeline.core.Context
-import org.apache.spark.{SparkConf, SparkException, SparkFiles}
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -30,18 +28,19 @@ object Utils {
         k => (k, properties.getProperty(k).trim)).toMap
     } catch {
       case e: IOException =>
-        throw new SparkException(s"Failed when loading Spark properties from $filename", e)
+        throw e
+//        throw new SparkException(s"Failed when loading Spark properties from $filename", e)
     } finally {
       inReader.close()
     }
   }
-  def filterConf(conf: SparkConf,prefix:String) = {
-    //spark.recheck.kafka.out.
-    val prefix_len = prefix.length
-    conf.getAll.filter(_._1.startsWith(prefix)).map{ case(k,v) =>
-        k.drop(prefix_len) -> v
-    }.toMap
-  }
+//  def filterConf(conf: SparkConf,prefix:String) = {
+//    //spark.recheck.kafka.out.
+//    val prefix_len = prefix.length
+//    conf.getAll.filter(_._1.startsWith(prefix)).map{ case(k,v) =>
+//        k.drop(prefix_len) -> v
+//    }.toMap
+//  }
 
   def filterConf(conf: Map[String,String],prefix:String) = {
     //spark.recheck.kafka.out.
@@ -91,11 +90,12 @@ object Utils {
       }
     }
     search_list ++= {
-      try {
-        Seq(SparkFiles.get(file))
-      }catch {
-        case e => Seq()
-      }
+//      try {
+//        Seq(SparkFiles.get(file))
+//      }catch {
+//        case e => Seq()
+//      }
+      Seq()
     }
 
     search_list.map(new File(_)).find(_.exists()) match {

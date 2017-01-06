@@ -1,4 +1,4 @@
-package com.hoolix.processor.configloaders
+package com.hoolix.processor.configuration
 
 case class PipelineConfig[T]
 (

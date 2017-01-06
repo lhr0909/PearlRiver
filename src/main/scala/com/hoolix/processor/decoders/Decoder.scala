@@ -6,14 +6,14 @@ trait Decoder {
   def decode(event: Event): Event
 }
 
-object Decoder {
-   def getDecoder(name:String) : Decoder = {
-    name match {
+//object Decoder {
+//   def getDecoder(name:String) : Decoder = {
+//    name match {
 //      case "json"     => JsonDecoder()
 //      case "xyz-json" => JsonDecoder()
-      case "xyz-line" => XYZLineDecoder()
+//      case "xyz-line" => XYZLineDecoder()
 //      case "raw-line" => RawLineDecoder()
-      case "filebeat" => FileBeatDecoder()
-    }
-  }
-}
+//      case "filebeat" => FileBeatDecoder()
+//    }
+//  }
+//}

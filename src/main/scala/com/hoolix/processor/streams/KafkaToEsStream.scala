@@ -5,6 +5,9 @@ import akka.kafka.scaladsl.Consumer.Control
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Keep, RunnableGraph}
 import com.hoolix.elasticsearch.action.bulk.BulkProcessor
+import com.hoolix.processor.decoders.{FileBeatDecoder, XYZLineDecoder}
+import com.hoolix.processor.filters.Filter
+import com.hoolix.processor.flows.{DecodeFlow, FilterFlow}
 import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
 import com.hoolix.processor.sources.KafkaSource
 import org.elasticsearch.client.transport.TransportClient
@@ -38,7 +41,13 @@ object KafkaToEsStream {
     val esSink = ElasticsearchBulkRequestSink(esClient, maxSize, parallelism, ec)
 
     def stream: RunnableGraph[Control] = {
-      kafkaSource.toMat(esSink.sink)(Keep.left)
+      val decodeFlow = DecodeFlow(20, FileBeatDecoder())
+      val filterFlow = FilterFlow(20, Seq[Filter]())
+
+      //    val mainStream = kafkaSource.toSource.via(decodeFlow.toFlow).via(filterFlow.toFlow).toMat(esSink.toSink)
+
+
+      kafkaSource.viaMat(decodeFlow.toFlow)(Keep.left).viaMat(filterFlow.toFlow)(Keep.left).toMat(esSink.sink)(Keep.left)
     }
 
     def run()(implicit materializer: Materializer): (BulkProcessor, Control) = {

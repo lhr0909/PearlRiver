@@ -7,7 +7,7 @@ case class SplitFilter(targetField: String, delimiter: String, limit: Int = -1, 
     // TODO 如果解析失败
     val payload = event.toPayload
     if (targetField != null && targetField != "") {
-      if (payload.containsKey(targetField)) {
+      if (payload.contains(targetField)) {
         val targetValue = payload.get(targetField).asInstanceOf[String]
         if (targetValue != "") {
           val values = targetValue.split(delimiter, limit)

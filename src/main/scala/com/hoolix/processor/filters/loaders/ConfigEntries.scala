@@ -6,7 +6,7 @@
 
 package com.hoolix.processor.filters.loaders
 
-import com.hoolix.processor.configloaders.PipelineTypeConfig
+import com.hoolix.processor.configuration.PipelineTypeConfig
 import com.hoolix.processor.filters.DateFilter
 import org.apache.commons.lang3.StringUtils
 import org.json4s.DefaultFormats

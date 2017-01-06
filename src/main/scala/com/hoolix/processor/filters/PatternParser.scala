@@ -1,11 +1,10 @@
-package com.hoolix.pipeline.filter
+package com.hoolix.processor.filters
 
 import java.util.regex.Pattern
 
-import com.hoolix.pipeline.core._
-import com.hoolix.pipeline.util.{Resource, Utils}
+import com.hoolix.processor.models.{Event, IntermediateEvent}
+import com.hoolix.processor.utils.Utils
 
-import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.io.Source
 
@@ -28,14 +27,14 @@ object PatternParser {
   * @param matches type不匹配时尝试项
   * @param patterns 自定义pattern, 参考patterns文件
   */
-case class PatternParser( cfg:FilterConfig,
+case class PatternParser(targetField: String,
                           matches:Seq[String]=Seq(),
                           patterns:Map[String,String]=Map(),
                           builtin_pattern_file:String = "patterns"
                         ) extends Filter{
 
   //TODO use shared default pattern
-  lazy val grok_pattern_lst = Source.fromURL(Utils.resolve_file(builtin_pattern_file, file_resolvers)).getLines()
+  lazy val grok_pattern_lst = Source.fromURL(Utils.resolve_file(builtin_pattern_file, Seq())).getLines()
     .filter(_.trim != "")
     .filter(!_.startsWith("#")).filter(!_.startsWith("//"))
     .map(_.split("[ \\s\t]+",2))
@@ -157,7 +156,8 @@ case class PatternParser( cfg:FilterConfig,
   }
 
 
-  override def handle(ctx: Context): Either[Throwable, Iterable[(String,Any)]] = {
+  override def handle(event: Event): Event = {
+    val payload = event.toPayload
     val types   =  {
       //if matches exist, use matches
       if (matches.size != 0) {
@@ -165,18 +165,19 @@ case class PatternParser( cfg:FilterConfig,
       }
       //else use type
       else {
-        Seq(ctx.get("type",""))
+//        Seq(ctx.get("type",""))
+        Seq(payload.get("type").asInstanceOf[String])
       }
     }
 
-    val message = ctx.get(cfg.target,"")
+    val message = payload.get(targetField).asInstanceOf[String]
 
     //先试type, 再试matcher列表
     for (typ <- types) {
       val pattern_opt = compiled_patterns.get(typ)
       if (pattern_opt.isEmpty) {
         //logger.warn("error: pattern not found [" + typ+"]")
-        ctx.metric(MetricTypes.metric_no_pattern)
+//        ctx.metric(MetricTypes.metric_no_pattern)
       }
       else {
 
@@ -185,51 +186,55 @@ case class PatternParser( cfg:FilterConfig,
         val (grok_parse_ok, grok_result) = match_pattern(names, pattern, message)
 
         if (grok_parse_ok) {
-          return Right(grok_result.toMap)
+          grok_result.toMap.foreach((pair) => {
+            payload.put(pair._1, pair._2)
+          })
+//          return Right(grok_result.toMap)
         }
       }
     }
-    logger.warn("grok failed: (" + message + ") try types: " + types + " " + ctx.all())
-    ctx.metric(MetricTypes.metric_pattern_fail)
-    Left(null)
+//    logger.warn("grok failed: (" + message + ") try types: " + types + " " + ctx.all())
+//    ctx.metric(MetricTypes.metric_pattern_fail)
+//    Left(null)
+    new IntermediateEvent(payload)
   }
 
-  override def handle_preview(ctx: PreviewContext): Either[Throwable, Iterable[(String,(Int, Int, String))]] = {
-    val types   =  {
-     matches.size match {
-       case 0 => Seq(ctx.get("type",""))
-       case _ => matches
-      }
-    }
-
-    val (start, end, message) = ctx.get_preview(cfg.target, (-1, -1, ""))
-
-    //先试type, 再试matcher列表
-    for (typ <- types) {
-      val pattern_opt = compiled_patterns.get(typ)
-      if (pattern_opt.isEmpty) {
-        ctx.metric(MetricTypes.metric_no_pattern)
-      }
-      else {
-
-        val (names, pattern) = pattern_opt.get
-
-        val (grok_parse_ok, grok_result) = match_pattern_with_position(names, pattern, message)
-
-        if (grok_parse_ok) {
-          return Right (
-            grok_result.map { case (name, (start_pos, end_pos, value)) =>
-              if (start_pos == -1 || end_pos == -1)
-                (name, (start, end, value))
-              else
-                (name, (start_pos, end_pos, value))
-            }
-          )
-        }
-      }
-    }
-    logger.warn("grok failed: (" + message + ") try types: " + types + " " + ctx.all())
-    ctx.metric(MetricTypes.metric_pattern_fail)
-    Left(null)
-  }
+//  override def handle_preview(ctx: PreviewContext): Either[Throwable, Iterable[(String,(Int, Int, String))]] = {
+//    val types   =  {
+//     matches.size match {
+//       case 0 => Seq(ctx.get("type",""))
+//       case _ => matches
+//      }
+//    }
+//
+//    val (start, end, message) = ctx.get_preview(cfg.target, (-1, -1, ""))
+//
+//    //先试type, 再试matcher列表
+//    for (typ <- types) {
+//      val pattern_opt = compiled_patterns.get(typ)
+//      if (pattern_opt.isEmpty) {
+//        ctx.metric(MetricTypes.metric_no_pattern)
+//      }
+//      else {
+//
+//        val (names, pattern) = pattern_opt.get
+//
+//        val (grok_parse_ok, grok_result) = match_pattern_with_position(names, pattern, message)
+//
+//        if (grok_parse_ok) {
+//          return Right (
+//            grok_result.map { case (name, (start_pos, end_pos, value)) =>
+//              if (start_pos == -1 || end_pos == -1)
+//                (name, (start, end, value))
+//              else
+//                (name, (start_pos, end_pos, value))
+//            }
+//          )
+//        }
+//      }
+//    }
+//    logger.warn("grok failed: (" + message + ") try types: " + types + " " + ctx.all())
+//    ctx.metric(MetricTypes.metric_pattern_fail)
+//    Left(null)
+//  }
 }

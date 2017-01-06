@@ -3,8 +3,8 @@ import javax.persistence.PersistenceException
 
 import com.avaje.ebean.{Ebean, EbeanServer, EbeanServerFactory}
 import com.avaje.ebean.config.ServerConfig
-import com.hoolix.pipeline.bean.{OfflineJob, PipelineDBConfig, PipelineDBConfigEntry}
-import com.hoolix.pipeline.core.Config
+import com.hoolix.processor.models.{OfflineJob, PipelineDBConfig, PipelineDBConfigEntry}
+import com.hoolix.processor.configuration.Config
 import org.slf4j.LoggerFactory
 
 object EbeanUtil {

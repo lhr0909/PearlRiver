@@ -1,7 +1,7 @@
 package com.hoolix.processor.filters.loaders
 
 import com.avaje.ebean.{Ebean, RawSqlBuilder}
-import com.hoolix.processor.configloaders.Config
+import com.hoolix.processor.configuration.Config
 import com.hoolix.processor.filters.Filter
 import com.hoolix.processor.models.PipelineDBConfig
 import com.hoolix.processor.utils.{Converter, EbeanUtil}

@@ -3,7 +3,6 @@ import java.sql.{Connection, DriverManager}
 
 import com.avaje.ebean.EbeanServerFactory
 import com.avaje.ebean.config.ServerConfig
-import com.hoolix.pipeline.bean.{PipelineDBConfig, PipelineDBConfigEntry}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
