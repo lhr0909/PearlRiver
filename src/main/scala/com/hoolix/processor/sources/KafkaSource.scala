@@ -1,11 +1,14 @@
 package com.hoolix.processor.sources
 
+import akka.actor.ActorSystem
 import akka.kafka.ConsumerMessage.CommittableMessage
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.Source
 import com.hoolix.processor.models.builders.KafkaEventBuilder
 import com.hoolix.processor.models.{FilebeatEvent, KafkaEvent}
+import com.hoolix.processor.modules.KafkaConsumerSettings
+import com.typesafe.config.Config
 
 import scala.concurrent.Future
 
@@ -25,11 +28,10 @@ object KafkaSource {
 
   def apply(
              parallelism: Int,
-             kafkaConsumerSettings: ConsumerSettings[Array[Byte], String],
              kafkaTopics: Set[String]
-           ): Source[KafkaEvent, Consumer.Control] = {
+           )(implicit config: Config, system: ActorSystem): Source[KafkaEvent, Consumer.Control] = {
 
-    Consumer.committableSource(kafkaConsumerSettings, Subscriptions.topics(kafkaTopics))
+    Consumer.committableSource(KafkaConsumerSettings(), Subscriptions.topics(kafkaTopics))
       .mapAsync(parallelism)(KafkaSource.convertToKafkaEvent)
 
   }

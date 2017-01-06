@@ -36,11 +36,8 @@ object XYZProcessorMain extends App {
 
     val stream = KafkaToEsStream(
       parallelism = 5,
-      maxSize = 100000,
       esClient,
-      KafkaConsumerSettings(),
-      Set("hooli_topic"),
-      executionContext
+      Set("hooli_topic")
     )
 
     val httpConfig = config.getConfig("http")
@@ -49,12 +46,13 @@ object XYZProcessorMain extends App {
       complete("后端程序还活着！")
     } ~ OfflineQueryRoutes() ~
     path("start") {
-      val (esBulkProcessor, kafkaControl) = stream.run()
+//      val (esBulkProcessor, kafkaControl) = stream.run()
+      val kafkaControl = stream.run()
 
       scala.sys.addShutdownHook {
         val terminateSeconds = 30
-        println(s"Shutting down ES Bulk Processor in $terminateSeconds seconds... - " + Instant.now)
-        esBulkProcessor.awaitClose(terminateSeconds, TimeUnit.SECONDS)
+//        println(s"Shutting down ES Bulk Processor in $terminateSeconds seconds... - " + Instant.now)
+//        esBulkProcessor.awaitClose(terminateSeconds, TimeUnit.SECONDS)
         println(s"Shutting down Kafka Source in $terminateSeconds seconds... - " + Instant.now)
         Await.result(kafkaControl.shutdown, terminateSeconds.seconds)
         println(s"Shutting down Akka Actor System now - " + Instant.now)
