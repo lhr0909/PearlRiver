@@ -1,12 +1,10 @@
 package com.hoolix.processor.streams
 
 import akka.actor.ActorSystem
-import akka.kafka.ConsumerSettings
 import akka.kafka.scaladsl.Consumer.Control
-import akka.stream.Materializer
 import akka.stream.scaladsl.{Keep, RunnableGraph}
-import com.hoolix.elasticsearch.action.bulk.BulkProcessor
-import com.hoolix.processor.sinks.{ElasticsearchBulkProcessorSink, ElasticsearchBulkRequestSink}
+import akka.stream.{KillSwitch, KillSwitches, Materializer}
+import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
 import com.hoolix.processor.sources.KafkaSource
 import com.typesafe.config.Config
 import org.elasticsearch.client.transport.TransportClient
@@ -46,7 +44,7 @@ object KafkaToEsStream {
 //      val kafkaControl = stream.run()
 //      (esSink.bulkProcessor, kafkaControl)
 //    }
-
+//
     def run()(implicit materializer: Materializer): Control = stream.run()
 
   }

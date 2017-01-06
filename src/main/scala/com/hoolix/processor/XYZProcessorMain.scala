@@ -9,7 +9,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.stream.ActorMaterializer
+import akka.kafka.scaladsl.Consumer.Control
+import akka.stream.{ActorMaterializer, KillSwitch}
 import com.hoolix.processor.http.routes.OfflineQueryRoutes
 import com.hoolix.processor.modules.{ElasticsearchClient, KafkaConsumerSettings}
 import com.hoolix.processor.streams.KafkaToEsStream
@@ -34,6 +35,8 @@ object XYZProcessorMain extends App {
 
     val esClient = ElasticsearchClient()
 
+    var kafkaControl: Control = null
+
     val stream = KafkaToEsStream(
       parallelism = 5,
       esClient,
@@ -47,18 +50,19 @@ object XYZProcessorMain extends App {
     } ~ OfflineQueryRoutes() ~
     path("start") {
 //      val (esBulkProcessor, kafkaControl) = stream.run()
-      val kafkaControl = stream.run()
-
-      scala.sys.addShutdownHook {
-        val terminateSeconds = 30
-//        println(s"Shutting down ES Bulk Processor in $terminateSeconds seconds... - " + Instant.now)
-//        esBulkProcessor.awaitClose(terminateSeconds, TimeUnit.SECONDS)
-        println(s"Shutting down Kafka Source in $terminateSeconds seconds... - " + Instant.now)
-        Await.result(kafkaControl.shutdown, terminateSeconds.seconds)
-        println(s"Shutting down Akka Actor System now - " + Instant.now)
-        system.terminate()
-      }
+      kafkaControl = stream.run()
       complete("pipeline started")
+    } ~
+    path("stop") {
+      println(s"Shutting down Kafka Source now... - " + Instant.now)
+      kafkaControl match {
+        case a: Control =>
+          //TODO: need to figure out a mechanism to wait on shutdown, otherwise it is better to use BulkProcessor
+          onSuccess(a.stop()) { extraction =>
+            complete("done")
+          }
+        case _ => complete("no stream started, but ok")
+      }
     }
 
 
@@ -78,6 +82,8 @@ object XYZProcessorMain extends App {
         .flatMap(_.unbind()) // trigger unbinding from the port
         .onComplete { _ =>
           println(s"Waiting for Akka Actor System to shut down in $terminateSeconds seconds... - " + Instant.now)
+          println(s"Shutting down Akka Actor System now - " + Instant.now)
+          system.terminate()
           Await.result(system.whenTerminated, terminateSeconds.seconds)
           println("Terminated safely. Cheers - " + Instant.now)
       }

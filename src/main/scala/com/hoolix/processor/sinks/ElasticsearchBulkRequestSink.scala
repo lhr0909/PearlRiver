@@ -25,7 +25,7 @@ object ElasticsearchBulkRequestSink {
              elasticsearchClient: TransportClient,
              concurrentRequests: Int
            )(implicit config: Config, ec: ExecutionContext): ElasticsearchBulkRequestSink = {
-    val esBulkConfig = config.getConfig("elasticserach.bulk")
+    val esBulkConfig = config.getConfig("elasticsearch.bulk")
     val maxBulkSizeInBytes = esBulkConfig.getString("max-size-in-bytes")
     val maxBulkActions = esBulkConfig.getInt("max-actions")
 
@@ -69,12 +69,14 @@ object ElasticsearchBulkRequestSink {
           val (bulkRequest: BulkRequest, offsets: Seq[CommittableOffset]) = b
 
           Future {
-            println()
+            println(s"started bulk of size ${ bulkRequest.requests().size() }")
             elasticsearchClient.bulk(bulkRequest, bulkListener {
               case bulkResponse: BulkResponse =>
+                println(s"bulk of size ${ bulkResponse.getItems.length } finished. Time took - ${ bulkResponse.getTookInMillis }" )
                 bulkRequestPromise.success(Some((bulkResponse, offsets)))
               case e: Exception =>
                 //FIXME: this is error for the bulk request, failure here stops the stream
+                println(s"bulk of size ${ bulkRequest.requests().size() } failed" )
                 e.printStackTrace()
                 //bulkRequestPromise.failure(e)
                 bulkRequestPromise.success(None)

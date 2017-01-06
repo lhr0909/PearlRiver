@@ -55,6 +55,7 @@ object ElasticsearchBulkFlow {
 
           override def onUpstreamFinish(): Unit = {
             if (bulkRequest.numberOfActions() > 0) {
+              println("upstream finished, bulking rest of the events")
               emit(out, Some(bulkRequest, offsets))
               complete(out)
             }

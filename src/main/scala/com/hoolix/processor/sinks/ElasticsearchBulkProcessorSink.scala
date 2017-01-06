@@ -23,7 +23,7 @@ object ElasticsearchBulkProcessorSink {
     elasticsearchClient: TransportClient,
     concurrentRequests: Int
   )(implicit config: Config, ec: ExecutionContext): ElasticsearchBulkProcessorSink = {
-    val esBulkConfig = config.getConfig("elasticserach.bulk")
+    val esBulkConfig = config.getConfig("elasticsearch.bulk")
     val maxBulkSizeInBytes = esBulkConfig.getString("max-size-in-bytes")
     val maxBulkActions = esBulkConfig.getInt("max-actions")
 
