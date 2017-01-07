@@ -7,6 +7,8 @@ import com.hoolix.processor.models.KafkaTransmitted
 import org.elasticsearch.action.bulk.BulkRequest
 import org.elasticsearch.common.unit.ByteSizeValue
 
+import scala.collection.JavaConversions
+
 /**
   * Hoolix 2017
   * Created by simon on 1/6/17.
@@ -42,7 +44,9 @@ object ElasticsearchBulkFlow {
           override def onPush(): Unit = {
             if (isAvailable(in)) {
               val incomingEvent = grab(in)
-              bulkRequest = bulkRequest.add(incomingEvent.toIndexRequest.source(incomingEvent.event.toPayload))
+              println("in bulk flow before conversion")
+              bulkRequest = bulkRequest.add(incomingEvent.toIndexRequest.source(JavaConversions.mutableMapAsJavaMap(incomingEvent.event.toPayload)))
+              println("in bulk flow after conversion")
               offsets :+= incomingEvent.committableOffset
             }
 

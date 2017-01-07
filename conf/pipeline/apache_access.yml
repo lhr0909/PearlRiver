@@ -1,21 +1,21 @@
 - type: pattern
   token: "*"
-  target: global.message
+  target: message
 
 - type: geoip
   token: "*"
-  target: global.clientip
+  target: clientip
 
 - type: timestamp
-  target: global.timestamp
+  target: timestamp
   token: "*"
 
 - type: user-agent
-  target: global.agent
+  target: agent
   token: "*"
 
 - type: split
-  target: global.request
+  target: request
   token: "*"
   args:
       delimiter: "\\?"
@@ -25,7 +25,7 @@
         - "request_params"
 
 - type: kv
-  target: global.request_params
+  target: request_params
   token: "*"
   field:
     - prefix: "request_param_"
@@ -97,67 +97,3 @@
 #    - percentage: 5.0
 #      distribution: [["error", "10"], ["unknown", "20"], ["warn", "30"], ["info", "40"]]
 #      anomalies: ["anomaly_demo"]
-
-################################################################################
-
-- type: pattern
-  token: "e5b654a4-b18c-4350-8564-fbebbaffc485"
-  target: global.message
-
-- type: geoip
-  token: "e5b654a4-b18c-4350-8564-fbebbaffc485"
-  target: global.clientip
-
-- type: timestamp
-  target: global.timestamp
-  token: "e5b654a4-b18c-4350-8564-fbebbaffc485"
-
-- type: user-agent
-  target: global.agent
-  token: "e5b654a4-b18c-4350-8564-fbebbaffc485"
-
-- type: split
-  target: global.request
-  token: "e5b654a4-b18c-4350-8564-fbebbaffc485"
-  args:
-      delimiter: "\\?"
-      max_split: "2"
-      names:
-        - "request_path"
-        - "request_params"
-
-- type: kv
-  target: global.request_params
-  token: "e5b654a4-b18c-4350-8564-fbebbaffc485"
-  field:
-    - prefix: "request_param_"
-  args:
-      delimiter: "&"
-      sub_delimiter: "="
-
-#- type: random-anomaly-detection
-#  token: "e5b654a4-b18c-4350-8564-fbebbaffc485"
-#  require:
-#    - "global.type match ^apache_access|nginx_access$"
-#  args:
-#    - percentage: 10.0
-#      distribution: [["error", "10"], ["unknown", "20"], ["warn", "30"], ["info", "40"]]
-#      anomalies: ["anomaly_demo"]
-#
-#- type: random-anomaly-detection
-#  token: "e5b654a4-b18c-4350-8564-fbebbaffc485"
-#  require:
-#    - "global.type match ^apache_access|nginx_access$"
-#  args:
-#    - percentage: 10.0
-#      distribution: [["error", "10"], ["unknown", "20"], ["warn", "30"], ["info", "40"]]
-#      anomalies: ["anomaly_directory_traversal", "anomaly_xss", "anomaly_php_cgi", "anomaly_mssql_injection", "anomaly_server_error", "anomaly_sql_injection"]
-#
-#- type: random-anomaly-detection
-#  token: "e5b654a4-b18c-4350-8564-fbebbaffc485"
-#  require:
-#    - "global.type match ^apache_error|nginx_error$"
-#  args:
-#    - percentage: 10.0
-#      distribution: [["error", "10"], ["unknown", "20"], ["warn", "30"], ["info", "40"]]
-#      anomalies: ["anomaly_segmentation_fault", "anomaly_denied", "anomaly_code_red", "anomaly_authentication", "anomaly_illegal_url"]
