@@ -158,7 +158,7 @@ case class PatternParser(targetField: String,
 
 
   override def handle(event: Event): Event = {
-    println(event)
+//    println(event)
     val payload = event.toPayload
     val types   =  {
       //if matches exist, use matches
@@ -168,26 +168,26 @@ case class PatternParser(targetField: String,
       //else use type
       else {
 //        Seq(ctx.get("type",""))
-        println(compiled_patterns)
-        println(payload.get("type"))
-        println(payload.get("type").asInstanceOf[Some[String]].get)
+//        println(compiled_patterns)
+//        println(payload.get("type"))
+//        println(payload.get("type").asInstanceOf[Some[String]].get)
 //        println(payload.get("type").asInstanceOf[Some[Some[String]]].get)
 //        println(payload.get("type").asInstanceOf[Some[Some[String]]].get.toString)
         Seq(payload.get("type").asInstanceOf[Some[String]].get)
       }
     }
 
-    println("=====in pattern filter handle")
-    println(payload)
-    println(types)
+//    println("=====in pattern filter handle")
+//    println(payload)
+//    println(types)
     val message = payload.get(targetField).asInstanceOf[Some[String]].get
-    println(message)
-    println(compiled_patterns)
-    println(types)
+//    println(message)
+//    println(compiled_patterns)
+//    println(types)
 
     //先试type, 再试matcher列表
     for (typ <- types) {
-      println(typ)
+//      println(typ)
 
       val pattern_opt = compiled_patterns.get(typ)
       if (pattern_opt.isEmpty) {
@@ -195,7 +195,7 @@ case class PatternParser(targetField: String,
 //        ctx.metric(MetricTypes.metric_no_pattern)
       }
       else {
-        println("in else ")
+//        println("in else ")
         val (names, pattern) = pattern_opt.get
 
         val (grok_parse_ok, grok_result) = match_pattern(names, pattern, message)
@@ -211,8 +211,8 @@ case class PatternParser(targetField: String,
 //    logger.warn("grok failed: (" + message + ") try types: " + types + " " + ctx.all())
 //    ctx.metric(MetricTypes.metric_pattern_fail)
 //    Left(null)
-    println("create IntermediateEvent from payload")
-    println(payload)
+//    println("create IntermediateEvent from payload")
+//    println(payload)
     IntermediateEvent(payload)
   }
 

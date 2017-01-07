@@ -23,9 +23,9 @@ object KafkaSource {
 //      .setEvent(FileBeatEvent.fromJsonString(committableMessage.record.value))
 //      .build()
 //    Event()
-    println(committableMessage)
+//    println(committableMessage)
     val event = KafkaTransmitted(committableMessage.committableOffset, FileBeatEvent.fromJsonString(committableMessage.record.value))
-    println(event)
+//    println(event)
 //    val event = KafkaTransmitted(committableMessage.committableOffset, LineEvent(committableMessage.record.value))
 
     //    val event = new FileBeatEvent(committableMessage.committableOffset, committableMessage.record.value)

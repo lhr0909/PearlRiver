@@ -11,9 +11,7 @@ case class  FileBeatDecoder() extends Decoder {
   lazy val logger = LoggerFactory.getLogger(this.getClass)
   override def decode(event: Event): XYZBasicEvent = {
     val payload = event.asInstanceOf[FileBeatEvent].toPayload
-    val token = payload.get("fields") match {
-      case Some(map) => map.asInstanceOf[Map[String, String]].get("token").toString
-    }
+    val token = payload("fields").asInstanceOf[Map[String, String]].getOrElse("token", "_")
     val tags = payload.get("tags") match {
       case Some(seq) => seq.asInstanceOf[Seq[String]]
     }
@@ -23,9 +21,9 @@ case class  FileBeatDecoder() extends Decoder {
 
     XYZBasicEvent(
       token,
-      payload.get("type").asInstanceOf[Some[String]].get,
+      payload("type").asInstanceOf[String],
       tags,
-      payload.get("message").asInstanceOf[Some[String]].get,
+      payload("message").asInstanceOf[String],
       "streaming",
       timestamp
     )

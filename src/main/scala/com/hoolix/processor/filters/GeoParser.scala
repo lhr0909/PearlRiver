@@ -33,17 +33,17 @@ case class GeoParser(targetField: String, geofile:String = "") extends Filter{
     }
 
     override def handle(event: Event): Event = {
-      println(event)
+//      println(event)
       val payload = event.toPayload
-      println(payload)
+//      println(payload)
       val ip = payload.get(targetField).asInstanceOf[Some[String]].get
 
       val resp = parseResp(ip)
       payload.put("city", resp.getCity.getName)
       payload.put("country", resp.getCountry.getName)
       payload.put("continent", resp.getContinent.getName)
-      println("in geo filter")
-      println(payload)
+//      println("in geo filter")
+//      println(payload)
 
       IntermediateEvent(payload)
 //      try {

@@ -7,9 +7,9 @@ case class KVFilter(targetField: String, delimiter: String="\\s+", subDelimiter:
 
   override def handle(event: Event): Event = {
     val payload = event.toPayload
-    println("in kv filter")
+//    println("in kv filter")
     if (subDelimiter != "") {
-      println("in kv filter")
+//      println("in kv filter")
       if (payload.contains(targetField)) {
         val field_value = payload.get(targetField).asInstanceOf[Some[String]].get
         if (field_value != null && field_value != "") {
@@ -26,8 +26,8 @@ case class KVFilter(targetField: String, delimiter: String="\\s+", subDelimiter:
         }
       }
     }
-    println("in kv filter")
-    println(payload)
+//    println("in kv filter")
+//    println(payload)
     IntermediateEvent(payload)
   }
 

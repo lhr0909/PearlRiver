@@ -9,7 +9,7 @@ case class IntermediateEvent(payload: collection.mutable.Map[String, Any]) exten
   override def toPayload: collection.mutable.Map[String, Any] = payload
 
   override def indexName: String = {
-    val token = payload.get("token").toString
+    val token = payload("token").asInstanceOf[String]
 //    val `type` = getType
 //    val uploadTimestamp = payload.get("upload_timestamp").asInstanceOf[Some[Long]].get
 //    val eventTimestamp = payload.getOrDefault("event_timestamp", null).asInstanceOf[Long]
@@ -18,7 +18,7 @@ case class IntermediateEvent(payload: collection.mutable.Map[String, Any]) exten
 //    else token + Event.INDEX_NAME_SEPARATOR + `type` + Event.INDEX_NAME_WILDCARD + uploadTimestamp
     token + "." + indexType
   }
-  override def indexType: String = payload.get("type").toString
+  override def indexType: String = payload("type").asInstanceOf[String]
   override def docId = ???
   override def toIndexRequest = new IndexRequest(indexName, indexType, docId)
 }

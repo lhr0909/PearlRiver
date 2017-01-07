@@ -55,20 +55,20 @@ object FileBeatEvent {
 
   def fromJsonString(json: String): FileBeatEvent = {
 
-    println(json)
+//    println(json)
     implicit val formats = DefaultFormats
 
-    println(parse(json).transformField({
-      case ("@timestamp", x) => ("timestamp", x)
-      case ("input_type", x) => ("inputType", x)
-      case ("type", x) => ("_type", x)
-    }))
+//    println(parse(json).transformField({
+//      case ("@timestamp", x) => ("timestamp", x)
+//      case ("input_type", x) => ("inputType", x)
+//      case ("type", x) => ("_type", x)
+//    }))
 
-    println(parse(json).transformField({
-      case ("@timestamp", x) => ("timestamp", x)
-      case ("input_type", x) => ("inputType", x)
-      case ("type", x) => ("_type", x)
-    }).extract[FileBeatEvent])
+//    println(parse(json).transformField({
+//      case ("@timestamp", x) => ("timestamp", x)
+//      case ("input_type", x) => ("inputType", x)
+//      case ("type", x) => ("_type", x)
+//    }).extract[FileBeatEvent])
 //    parse(json).extract[FileBeatEvent]
 
     val fileBeatEvent = parse(json).transformField({

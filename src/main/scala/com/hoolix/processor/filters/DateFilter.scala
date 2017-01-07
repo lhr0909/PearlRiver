@@ -78,7 +78,7 @@ case class DateFilter(targetField: String,
         ret = Some(date)
       } else {
         //TODO debug only, remove later
-        println(err)
+//        println(err)
       }
     }
 
@@ -88,8 +88,8 @@ case class DateFilter(targetField: String,
   override def handle(event: Event): Event = {
     val payload = event.toPayload
     payload.put("event_timestamp", parse(payload.get(targetField).asInstanceOf[Some[String]].get))
-    println("in date filter")
-    println(payload)
+//    println("in date filter")
+//    println(payload)
     IntermediateEvent(payload)
 
 
