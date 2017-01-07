@@ -83,6 +83,35 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 }
 
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "com.github.jengelman.gradle.plugins:shadow:1.2.4"
+    }
+}
+
+apply plugin: "com.github.johnrengelman.shadow"
+
+shadowJar {
+    baseName "xyz-processor"
+    version = "0.1"
+    zip64  true
+    classifier = null
+
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+    manifest {
+        attributes "Main-Class": "com.hoolix.processor.XYZProcessorMain"
+    }
+    //require by akka
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer) {
+        resource = 'reference.conf'
+    }
+}
+
 jar {
     baseName "xyz-processor"
     version = "0.1"
