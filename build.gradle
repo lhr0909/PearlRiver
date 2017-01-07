@@ -38,10 +38,12 @@ sourceSets {
     }
 
     dependencies {
+        // 底层依赖
         compile 'org.scala-lang:scala-library:2.11.8'
         compileOnly "org.projectlombok:lombok:1.16.12"
         compile 'com.typesafe:config:1.3.1'
 
+        // Akka主依赖
         compile 'com.typesafe.akka:akka-actor_2.11:2.4.16'
         compile 'com.typesafe.akka:akka-agent_2.11:2.4.16'
         compile 'com.typesafe.akka:akka-camel_2.11:2.4.16'
@@ -63,40 +65,38 @@ sourceSets {
         compile 'com.typesafe.akka:akka-typed-experimental_2.11:2.4.16'
         compile 'com.typesafe.akka:akka-persistence-query-experimental_2.11:2.4.16'
 
-
-
-        compile "mysql:mysql-connector-java:5.1.39"
+        // Akka其他依赖
         compile 'com.typesafe.akka:akka-http_2.11:10.0.1'
-
-        compile 'com.maxmind.geoip2:geoip2:2.8.0'
-
-        compile "eu.bitwalker:UserAgentUtils:1.20"
-
-
-        compile 'joda-time:joda-time:2.9.5'
+        compile 'com.typesafe.akka:akka-http-spray-json_2.11:10.0.1'
+        compile 'com.typesafe.akka:akka-stream-kafka_2.11:0.13'
         compile 'org.apache.bahir:spark-streaming-akka_2.11:2.0.1'
-        compile group: "com.typesafe.akka", name: "akka-stream-kafka_2.11", version: "0.13"
+
+        // ES相关依赖
+        compile 'org.elasticsearch.client:transport:5.1.1'
+
+        // 其他Utils依赖
+        compile 'org.apache.commons:commons-lang3:3.5'
+        compile 'joda-time:joda-time:2.9.5'
         compile 'org.json4s:json4s-native_2.11:3.5.0'
         compile 'org.json4s:json4s-jackson_2.11:3.5.0'
+        compile 'com.typesafe.slick:slick_2.11:3.1.1'
+        compile "mysql:mysql-connector-java:5.1.39"
+
+        // 解析UA和geoip的依赖
+        compile 'com.maxmind.geoip2:geoip2:2.8.0'
+        compile "eu.bitwalker:UserAgentUtils:1.20"
         //TODO: explicitly add jackson
 
         compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.7'
         compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.7'
         compile group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: '2.7'
 
-        compile 'org.apache.commons:commons-lang3:3.5'
 
-        compile 'org.elasticsearch.client:transport:5.1.1'
-
-        compile 'io.spray:spray-json_2.11:1.3.3'
-
-
-
+//        compile 'io.spray:spray-json_2.11:1.3.3'
         compile "org.avaje.ebeanorm:avaje-ebeanorm:8.1.1"
         ebeanagent 'org.avaje.ebeanorm:avaje-ebeanorm-agent:8.1.1'
 
-
-
+        // 测试依赖
         testCompile 'org.scala-lang:scala-library:2.11.8'
         testCompile group: 'junit', name: 'junit', version: '4.11'
     }
@@ -114,7 +114,6 @@ sourceSets {
     compileJava.doLast {
         ebeanEnhance(destinationDir, "com.hoolix.pipeline.bean.*")
     }
-
 //    compileScala dependsOn: compileJava
 //    task compile(dependsOn: [compileJava, compileScala]) << {
 //    }
