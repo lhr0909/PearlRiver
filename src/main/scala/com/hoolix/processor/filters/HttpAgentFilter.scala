@@ -17,7 +17,7 @@ case class HttpAgentFilter(targetField: String) extends Filter{
     val payload = event.toPayload
 
 
-    val agent_str = Some(payload.get(targetField).asInstanceOf[String]) match {
+    val agent_str = Some(payload.get(targetField).asInstanceOf[Some[String]].get) match {
       case Some("")  => ""
       case Some("-") => ""
 //      case None      => ""
@@ -37,7 +37,9 @@ case class HttpAgentFilter(targetField: String) extends Filter{
 //    )
     payload.put("agent_browser", browser)
     payload.put("agent_os", os)
-    new IntermediateEvent(payload)
+    println("in agent filter")
+    println(payload)
+    IntermediateEvent(payload)
   }
 
   def browser_tag = Seq(

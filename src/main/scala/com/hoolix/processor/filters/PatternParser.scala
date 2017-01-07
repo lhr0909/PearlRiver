@@ -30,11 +30,12 @@ object PatternParser {
 case class PatternParser(targetField: String,
                           matches:Seq[String]=Seq(),
                           patterns:Map[String,String]=Map(),
-                          builtin_pattern_file:String = "patterns"
-                        ) extends Filter{
+                          builtin_pattern_file:String = "conf/patterns"
+                        ) extends Filter {
 
   //TODO use shared default pattern
-  lazy val grok_pattern_lst = Source.fromURL(Utils.resolve_file(builtin_pattern_file, Seq())).getLines()
+  lazy val grok_pattern_lst = Source.fromFile(builtin_pattern_file).getLines()
+//  lazy val grok_pattern_lst = Source.fromURL(Utils.resolve_file(builtin_pattern_file, Seq())).getLines()
     .filter(_.trim != "")
     .filter(!_.startsWith("#")).filter(!_.startsWith("//"))
     .map(_.split("[ \\s\t]+",2))
@@ -84,7 +85,7 @@ case class PatternParser(targetField: String,
   }
   //预编译正则
   //pattern thread-safe
-  lazy val compiled_patterns = grok_pattern_lst.map { case (name,pat) =>
+  val compiled_patterns = grok_pattern_lst.map { case (name,pat) =>
     (name, extend_pattern(pat))
   } .map { case (name, pattern_str) =>
     val pattern = pattern_str.getBytes
@@ -157,6 +158,7 @@ case class PatternParser(targetField: String,
 
 
   override def handle(event: Event): Event = {
+    println(event)
     val payload = event.toPayload
     val types   =  {
       //if matches exist, use matches
@@ -166,21 +168,34 @@ case class PatternParser(targetField: String,
       //else use type
       else {
 //        Seq(ctx.get("type",""))
-        Seq(payload.get("type").asInstanceOf[String])
+        println(compiled_patterns)
+        println(payload.get("type"))
+        println(payload.get("type").asInstanceOf[Some[String]].get)
+//        println(payload.get("type").asInstanceOf[Some[Some[String]]].get)
+//        println(payload.get("type").asInstanceOf[Some[Some[String]]].get.toString)
+        Seq(payload.get("type").asInstanceOf[Some[String]].get)
       }
     }
 
-    val message = payload.get(targetField).asInstanceOf[String]
+    println("=====in pattern filter handle")
+    println(payload)
+    println(types)
+    val message = payload.get(targetField).asInstanceOf[Some[String]].get
+    println(message)
+    println(compiled_patterns)
+    println(types)
 
     //先试type, 再试matcher列表
     for (typ <- types) {
+      println(typ)
+
       val pattern_opt = compiled_patterns.get(typ)
       if (pattern_opt.isEmpty) {
         //logger.warn("error: pattern not found [" + typ+"]")
 //        ctx.metric(MetricTypes.metric_no_pattern)
       }
       else {
-
+        println("in else ")
         val (names, pattern) = pattern_opt.get
 
         val (grok_parse_ok, grok_result) = match_pattern(names, pattern, message)
@@ -196,7 +211,9 @@ case class PatternParser(targetField: String,
 //    logger.warn("grok failed: (" + message + ") try types: " + types + " " + ctx.all())
 //    ctx.metric(MetricTypes.metric_pattern_fail)
 //    Left(null)
-    new IntermediateEvent(payload)
+    println("create IntermediateEvent from payload")
+    println(payload)
+    IntermediateEvent(payload)
   }
 
 //  override def handle_preview(ctx: PreviewContext): Either[Throwable, Iterable[(String,(Int, Int, String))]] = {

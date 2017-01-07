@@ -148,3 +148,4 @@ HoolixNginxError %{NGINX_ERROR}
 hadoop %{HADOOP_LOG}
 mysql_general_query %{MySQL_GENERAL_QUERY_LOG}
 mysql_error %{MySQL_ERROR_LOG}
+test %{apache_access}

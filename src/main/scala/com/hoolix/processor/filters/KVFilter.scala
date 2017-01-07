@@ -7,26 +7,28 @@ case class KVFilter(targetField: String, delimiter: String="\\s+", subDelimiter:
 
   override def handle(event: Event): Event = {
     val payload = event.toPayload
-
+    println("in kv filter")
     if (subDelimiter != "") {
-      val field_value = payload.get(targetField).asInstanceOf[String]
-      if (field_value != null && field_value != "") {
-        val words = field_value.split(delimiter)
+      println("in kv filter")
+      if (payload.contains(targetField)) {
+        val field_value = payload.get(targetField).asInstanceOf[Some[String]].get
+        if (field_value != null && field_value != "") {
+          val words = field_value.split(delimiter)
 
-        words.foreach { word => {
-          val kvs = word.split(subDelimiter, 2)
-          kvs.size match {
-            case 0 => None
-            case 1 => None
-            case 2 => payload.put(kvs(0), kvs(1))
-          }
-        }}
+          words.foreach { word => {
+            val kvs = word.split(subDelimiter, 2)
+            kvs.size match {
+              case 0 => None
+              case 1 => None
+              case 2 => payload.put(kvs(0), kvs(1)) // TODO prefix or nest
+            }
+          }}
+        }
       }
-
-
-
     }
-    new IntermediateEvent(payload)
+    println("in kv filter")
+    println(payload)
+    IntermediateEvent(payload)
   }
 
 //  override def handle_preview(ctx: PreviewContext): Either[Throwable, Iterable[(String,(Int,Int, Any))]] = {

@@ -16,7 +16,7 @@ case class RegexBasedAnomalyDetectionFilter(params: Seq[Seq[String]]) extends Fi
         payload.put(anomaly_field, anomaly_value)
       }
     })
-    new IntermediateEvent(payload)
+    IntermediateEvent(payload)
   }
 }
 
@@ -52,6 +52,6 @@ case class RandomAnomalyDetectionFilter(percentage: Double, distribution: Seq[Se
           payload.put(anomaly, level)
       }
     })
-    new IntermediateEvent(payload)
+    IntermediateEvent(payload)
   }
 }

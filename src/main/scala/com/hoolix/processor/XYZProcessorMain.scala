@@ -67,9 +67,9 @@ object XYZProcessorMain extends App {
     var kafkaControl: Control = null
 
     val stream = KafkaToEsStream(
-      parallelism = 5,
+      parallelism = 1,
       esClient,
-      Set("hooli_topic")
+      Set("test_topic3")
     )
 
     val httpConfig = config.getConfig("http")

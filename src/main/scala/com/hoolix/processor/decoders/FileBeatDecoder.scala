@@ -7,19 +7,27 @@ import org.slf4j.LoggerFactory
   * Hoolix 2016
   * Created by simon on 12/8/16.
   */
-case class FileBeatDecoder() extends Decoder {
+case class  FileBeatDecoder() extends Decoder {
   lazy val logger = LoggerFactory.getLogger(this.getClass)
   override def decode(event: Event): XYZBasicEvent = {
-    println(event)
     val payload = event.asInstanceOf[FileBeatEvent].toPayload
-    println(payload)
+    val token = payload.get("fields") match {
+      case Some(map) => map.asInstanceOf[Map[String, String]].get("token").toString
+    }
+    val tags = payload.get("tags") match {
+      case Some(seq) => seq.asInstanceOf[Seq[String]]
+    }
+    val timestamp = payload.get("timestamp") match {
+      case Some(long) => long.asInstanceOf[Long]
+    }
+
     XYZBasicEvent(
-      payload.get("fields").asInstanceOf[Map[String, String]].get("token").asInstanceOf[String],
-      payload.get("type").asInstanceOf[String],
-      payload.get("tags").asInstanceOf[Seq[String]],
-      payload.get("message").asInstanceOf[String],
+      token,
+      payload.get("type").asInstanceOf[Some[String]].get,
+      tags,
+      payload.get("message").asInstanceOf[Some[String]].get,
       "streaming",
-      payload.get("timestamp").asInstanceOf[Long]
+      timestamp
     )
   }
 }
