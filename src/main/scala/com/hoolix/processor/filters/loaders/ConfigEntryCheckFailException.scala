@@ -18,3 +18,6 @@ case class ConfigEntryCheckFailException
 
 
 }
+
+case class ConfigCheckFailException(msg: String) extends Exception(msg) {
+}
