@@ -40,8 +40,8 @@ case class FileBeatEvent(
     payload
   }
 
-  override def indexName = ???
-  override def indexType = ???
+  override def indexName = s"${_type}" //add more stuff
+  override def indexType = _type
   override def docId = ???
   override def toIndexRequest = ???
 }

@@ -38,16 +38,16 @@ object KafkaToEsStream {
     val kafkaSource = KafkaSource(parallelism, kafkaTopics)
 //    val esSink = ElasticsearchBulkProcessorSink(esClient, parallelism)
     val esSink = ElasticsearchBulkRequestSink(esClient, parallelism)
+    val decodeFlow = DecodeFlow(parallelism, FileBeatDecoder())
 
     def stream: RunnableGraph[Control] = {
-      val decodeFlow = DecodeFlow(parallelism, FileBeatDecoder())
-      val filterFlow = FilterFlow(parallelism, Seq[Filter]())
+//      val filterFlow = FilterFlow(parallelism, Seq[Filter]())
 
       //    val mainStream = kafkaSource.toSource.via(decodeFlow.toFlow).via(filterFlow.toFlow).toMat(esSink.toSink)
 
       kafkaSource
         .viaMat(decodeFlow.toFlow)(Keep.left)
-        .viaMat(filterFlow.toFlow)(Keep.left)
+//        .viaMat(filterFlow.toFlow)(Keep.left)
         .toMat(esSink.sink)(Keep.left)
     }
 
