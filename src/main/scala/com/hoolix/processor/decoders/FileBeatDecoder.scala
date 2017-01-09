@@ -1,5 +1,7 @@
 package com.hoolix.processor.decoders
 
+import java.util.Date
+
 import com.hoolix.processor.models.{Event, FileBeatEvent, XYZBasicEvent}
 import org.slf4j.LoggerFactory
 
@@ -11,21 +13,45 @@ case class  FileBeatDecoder() extends Decoder {
   lazy val logger = LoggerFactory.getLogger(this.getClass)
   override def decode(event: Event): XYZBasicEvent = {
     val payload = event.asInstanceOf[FileBeatEvent].toPayload
-    val token = payload("fields").asInstanceOf[Map[String, String]].getOrElse("token", "_")
-    val tags = payload.get("tags") match {
-      case Some(seq) => seq.asInstanceOf[Seq[String]]
+
+    //TODO: decide what to return when types don't match (should we really return _unknown_ ?
+
+    val token = payload.get("fields") match {
+      case Some(map: Map[String, String]) =>
+        map.get("token") match {
+          case Some(x: String) => x
+          case _ => "_unknown_"
+        }
+      case _ => "_unknown_"
     }
+
+    val tags = payload.get("tags") match {
+      case Some(seq: Seq[String]) => seq
+      case _ => Seq[String]()
+    }
+
     val timestamp = payload.get("timestamp") match {
-      case Some(long) => long.asInstanceOf[Long]
+      case Some(timestamp: Long) => timestamp
+      case _ => new Date().getTime
+    }
+
+    val typ = payload.get("type") match {
+      case Some(t: String) => t
+      case _ => "_unknown_"
+    }
+
+    val msg = payload.get("message") match {
+      case Some(m: String) => m
+      case _ => "_"
     }
 
     XYZBasicEvent(
-      token,
-      payload("type").asInstanceOf[String],
-      tags,
-      payload("message").asInstanceOf[String],
-      "streaming",
-      timestamp
+      token = token,
+      `type` = typ,
+      tags = tags,
+      message = msg,
+      uploadType = "streaming",
+      uploadTimestamp = timestamp
     )
   }
 }

@@ -12,7 +12,7 @@ case class XYZBasicEvent(
   tags: Seq[String],
   message: String,
   uploadType: String,
-  uploadTimestamp: Long
+  uploadTimestamp: Long // when it is uploaded
 ) extends Event {
 
   override def toPayload = collection.mutable.Map(
@@ -28,5 +28,5 @@ case class XYZBasicEvent(
 //  getToken + Event.INDEX_NAME_SEPARATOR + getType
   override def indexType = `type`
   override def docId = ???
-  override def toIndexRequest = new IndexRequest(indexName, indexType, docId)
+  override def toIndexRequest = new IndexRequest(indexName, indexType) // let ES create a UUID
 }
