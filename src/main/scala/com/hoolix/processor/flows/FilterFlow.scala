@@ -16,8 +16,10 @@ case class FilterFlow(parallelism: Int, filters: Map[String, Map[String, Seq[(Se
     Flow[KafkaTransmitted].mapAsync(parallelism)((kafkaTransmitted: KafkaTransmitted) => {
       var filtered: Event = kafkaTransmitted.event
       val payload = filtered.toPayload
-//      val temp : Seq[(Seq[(Event) => Boolean], Filter)] = filters.get(payload("token").asInstanceOf[String]).get(payload("type").asInstanceOf[String])
-      val temp : Seq[(Seq[(Event) => Boolean], Filter)] = filters("*")("*") // TODO
+//      filters.getOrElse(payload("token").asInstanceOf[String], filters("*"))
+
+      val temp : Seq[(Seq[(Event) => Boolean], Filter)] = filters.get("*").get(payload("type").asInstanceOf[String])
+//      val temp : Seq[(Seq[(Event) => Boolean], Filter)] = filters("*")("*") // TODO
       for (elem <- temp) {
         var required = true
         for (r <- elem._1) {

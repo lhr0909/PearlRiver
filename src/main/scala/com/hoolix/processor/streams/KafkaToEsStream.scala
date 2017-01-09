@@ -45,7 +45,30 @@ object KafkaToEsStream {
     def stream: RunnableGraph[Control] = {
 
       val decodeFlow = DecodeFlow(parallelism, FileBeatDecoder())
-      val filterFlow = FilterFlow(parallelism, ConfigLoader.build_from_local())
+      val apache_access = ConfigLoader.build_from_local("conf/pipeline/apache_access.yml")
+      val apache_error = ConfigLoader.build_from_local("conf/pipeline/apache_error.yml")
+      val nginx_access = ConfigLoader.build_from_local("conf/pipeline/nginx_access.yml")
+      val nginx_error = ConfigLoader.build_from_local("conf/pipeline/nginx_error.yml")
+      val mysql_error = ConfigLoader.build_from_local("conf/pipeline/mysql_error.yml")
+      println(apache_access)
+      println(apache_error)
+      println(nginx_access)
+      println(nginx_error)
+      println(mysql_error)
+      val filtersMap = Map(
+        "*" -> Map(
+          "apache_access" -> apache_access("*")("*"),
+          "apache_error" -> apache_error("*")("*"),
+          "nginx_access" -> nginx_access("*")("*"),
+          "nginx_error" -> nginx_error("*")("*"),
+          "mysql_error" -> mysql_error("*")("*")
+        )
+      )
+
+      println(filtersMap)
+
+
+      val filterFlow = FilterFlow(parallelism, filtersMap)
 //      val filterFlow = FilterFlow(parallelism, Seq[Filter](
 //        PatternParser("message"),
 //        GeoParser("clientip", "conf/GeoLite2-City.mmdb"),
