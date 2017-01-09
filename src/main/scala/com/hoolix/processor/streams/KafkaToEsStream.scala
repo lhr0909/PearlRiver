@@ -8,6 +8,7 @@ import com.hoolix.processor.decoders.FileBeatDecoder
 import com.hoolix.processor.filters._
 import com.hoolix.elasticsearch.action.bulk.BulkProcessor
 import com.hoolix.processor.decoders.{FileBeatDecoder, XYZLineDecoder}
+import com.hoolix.processor.filters.loaders.ConfigLoader
 import com.hoolix.processor.flows.{DecodeFlow, FilterFlow}
 import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
 import com.hoolix.processor.sources.KafkaSource
@@ -44,14 +45,15 @@ object KafkaToEsStream {
     def stream: RunnableGraph[Control] = {
 
       val decodeFlow = DecodeFlow(parallelism, FileBeatDecoder())
-      val filterFlow = FilterFlow(parallelism, Seq[Filter](
-        PatternParser("message"),
-        GeoParser("clientip", "conf/GeoLite2-City.mmdb"),
-        DateFilter("timestamp"),
-        HttpAgentFilter("agent"),
-        SplitFilter("request", "\\?", 2, Seq("request_path", "request_params")),
-        KVFilter("request_params", delimiter = "&")
-      ))
+      val filterFlow = FilterFlow(parallelism, ConfigLoader.build_from_local())
+//      val filterFlow = FilterFlow(parallelism, Seq[Filter](
+//        PatternParser("message"),
+//        GeoParser("clientip", "conf/GeoLite2-City.mmdb"),
+//        DateFilter("timestamp"),
+//        HttpAgentFilter("agent"),
+//        SplitFilter("request", "\\?", 2, Seq("request_path", "request_params")),
+//        KVFilter("request_params", delimiter = "&")
+//      ))
 
       //    val mainStream = kafkaSource.toSource.via(decodeFlow.toFlow).via(filterFlow.toFlow).toMat(esSink.toSink)
 

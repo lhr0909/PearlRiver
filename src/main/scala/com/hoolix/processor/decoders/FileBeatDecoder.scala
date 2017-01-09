@@ -12,7 +12,7 @@ case class  FileBeatDecoder() extends Decoder {
   override def decode(event: Event): XYZBasicEvent = {
     val payload = event.asInstanceOf[FileBeatEvent].toPayload
     val token = payload.get("fields") match {
-      case Some(map) => map.asInstanceOf[Map[String, String]].get("token").toString
+      case Some(map) => map.asInstanceOf[Map[String, String]]("token")
     }
     val tags = payload.get("tags") match {
       case Some(seq) => seq.asInstanceOf[Seq[String]]

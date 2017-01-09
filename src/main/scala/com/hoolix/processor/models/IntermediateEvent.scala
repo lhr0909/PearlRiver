@@ -9,6 +9,7 @@ case class IntermediateEvent(payload: collection.mutable.Map[String, Any]) exten
   override def toPayload: collection.mutable.Map[String, Any] = payload
 
   override def indexName: String = {
+//    payload.
     val token = payload.get("token").toString
 //    val `type` = getType
 //    val uploadTimestamp = payload.get("upload_timestamp").asInstanceOf[Some[Long]].get

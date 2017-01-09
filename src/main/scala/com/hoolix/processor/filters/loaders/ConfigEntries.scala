@@ -6,7 +6,6 @@
 
 package com.hoolix.processor.filters.loaders
 
-import com.hoolix.processor.configuration.PipelineTypeConfig
 import com.hoolix.processor.filters.DateFilter
 import org.apache.commons.lang3.StringUtils
 import org.json4s.DefaultFormats
@@ -24,7 +23,7 @@ object ConfigEntryBuilder {
 
   object ConfigEntry {
     val entry_mapping = Map (
-      "config"    -> TypeConfigEntry,
+//      "config"    -> TypeConfigEntry,
       "pattern"   -> PatternConfigEntry,
       "kv"        -> KVConfigEntry,
       "split"     -> SplitConfigEntry,
@@ -522,17 +521,17 @@ case class RegexBasedAnomalyDetectionConfigEntry() extends ConfigEntry {
   }
 }
 
-case class TypeConfigEntry() extends ConfigEntry {
-
-  var config = PipelineTypeConfig()
-  override def parse_args(args: Any): Option[String] = {
-    val json = args.safe_cast[Map[String,Any]]("arguments")
-    json.getOrElse("mapping", "").safe_cast[String]("arguments.mapping") match {
-      case s if s.trim != "" => config.mapping_file = Some(s)
-      case _ =>
-    }
-    None
-  }
-
-  override def toString() : String = {super.toString +",config:%s".format(config)}
-}
+//case class TypeConfigEntry() extends ConfigEntry {
+//
+//  var config = PipelineTypeConfig()
+//  override def parse_args(args: Any): Option[String] = {
+//    val json = args.safe_cast[Map[String,Any]]("arguments")
+//    json.getOrElse("mapping", "").safe_cast[String]("arguments.mapping") match {
+//      case s if s.trim != "" => config.mapping_file = Some(s)
+//      case _ =>
+//    }
+//    None
+//  }
+//
+//  override def toString() : String = {super.toString +",config:%s".format(config)}
+//}
