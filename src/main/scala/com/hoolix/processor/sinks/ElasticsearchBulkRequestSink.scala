@@ -5,7 +5,7 @@ import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.stream.scaladsl.{Flow, Sink}
 import com.hoolix.processor.flows.ElasticsearchBulkFlow
 import com.hoolix.processor.flows.ElasticsearchBulkFlow.BulkRequestAndOffsets
-import com.hoolix.processor.models.KafkaEvent
+import com.hoolix.processor.models.KafkaTransmitted
 import com.typesafe.config.Config
 import org.elasticsearch.action.ActionListener
 import org.elasticsearch.action.bulk.{BulkItemResponse, BulkRequest, BulkResponse}
@@ -40,8 +40,8 @@ object ElasticsearchBulkRequestSink {
                                       implicit val ec: ExecutionContext
                                     ) {
 
-    def bulkFlow: Flow[KafkaEvent, Option[BulkRequestAndOffsets], NotUsed] = {
-      Flow[KafkaEvent].via(ElasticsearchBulkFlow(
+    def bulkFlow: Flow[KafkaTransmitted, Option[BulkRequestAndOffsets], NotUsed] = {
+      Flow[KafkaTransmitted].via(ElasticsearchBulkFlow(
         maxBulkActions,
         ByteSizeValue.parseBytesSizeValue(
           maxBulkSizeInBytes,
@@ -118,7 +118,7 @@ object ElasticsearchBulkRequestSink {
       }
     }
 
-    def sink: Sink[KafkaEvent, NotUsed] = {
+    def sink: Sink[KafkaTransmitted, NotUsed] = {
       if (concurrentRequests < 1) {
         val flow = bulkFlow
           .filter(_.isDefined)

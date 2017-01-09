@@ -4,7 +4,16 @@ import java.io.File
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
+import org.slf4j.LoggerFactory
 import akka.actor.ActorSystem
+import akka.kafka.ConsumerSettings
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
+import com.hoolix.processor.decoders.FileBeatDecoder
+import com.hoolix.processor.filters.Filter
+import com.hoolix.processor.flows.{DecodeFlow, FilterFlow}
+import akka.stream.scaladsl.{Keep, Sink, Source}
+import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
+import com.hoolix.processor.sources.KafkaSource
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
@@ -15,6 +24,12 @@ import com.hoolix.processor.http.routes.OfflineQueryRoutes
 import com.hoolix.processor.modules.{ElasticsearchClient, KafkaConsumerSettings}
 import com.hoolix.processor.streams.KafkaToEsStream
 import com.typesafe.config.ConfigFactory
+import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
+import org.elasticsearch.common.logging.Loggers
+import org.elasticsearch.common.settings.Settings
+import org.elasticsearch.common.transport.InetSocketTransportAddress
+import org.elasticsearch.transport.client.PreBuiltTransportClient
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -25,12 +40,26 @@ import scala.concurrent.duration._
   * Created by simon on 12/29/16.
   */
 object XYZProcessorMain extends App {
+  val logger = LoggerFactory.getLogger(this.getClass)
 
   override def main(args: Array[String]): Unit = {
     implicit val config = ConfigFactory.parseFile(new File("conf/application.conf"))
 
+
+    val decider: Supervision.Decider = { e =>
+      logger.error("Unhandled exception in stream", e)
+      e.printStackTrace()
+//      logger.error(e.printStackTrace())
+      Supervision.Stop
+    }
+
+
+
+
     implicit val system = ActorSystem("xyz-processor", config)
-    implicit val materializer = ActorMaterializer()
+    val materializerSettings = ActorMaterializerSettings(system).withSupervisionStrategy(decider)
+    implicit val materializer = ActorMaterializer(materializerSettings)(system)
+
     implicit val executionContext = system.dispatchers.lookup("xyz-dispatcher")
 
     val esClient = ElasticsearchClient()
@@ -38,9 +67,9 @@ object XYZProcessorMain extends App {
     var kafkaControl: Control = null
 
     val stream = KafkaToEsStream(
-      parallelism = 5,
+      parallelism = 1,
       esClient,
-      Set("hooli_topic")
+      Set("test_topic3")
     )
 
     val httpConfig = config.getConfig("http")

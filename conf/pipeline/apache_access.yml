@@ -1,0 +1,65 @@
+- type: pattern
+  token: "*"
+  target: message
+#  types: ["apache_access"]
+
+- type: geoip
+  token: "*"
+  target: clientip
+#  types: ["apache_access"]
+
+- type: timestamp
+  target: timestamp
+  token: "*"
+#  types: ["apache_access"]
+
+- type: user-agent
+  target: agent
+  token: "*"
+#  types: ["apache_access"]
+
+- type: split
+  target: request
+  token: "*"
+#  types: ["apache_access"]
+  args:
+      delimiter: "\\?"
+      max_split: "2"
+      names:
+        - "request_path"
+        - "request_params"
+
+- type: kv
+  target: request_params
+  token: "*"
+#  types: ["apache_access"]
+  field:
+    - prefix: "request_param_"
+  args:
+      delimiter: "&"
+      sub_delimiter: "="
+
+#- type: regex-based-anomaly-detection
+#  token: "*"
+#  require:
+#    - "global.type match ^apache_access|nginx_access$"
+#  args:
+#    - params: [
+#        ["request", "(?i).*(\\.\\./\\.\\.|echo|cmd\\.exe|root\\.exe|_mem_bin|msadc|winnt|boot\\.ini).*", "anomaly_directory_traversal", "error"],
+#        ["request", "(?i).*(<script>|src=javascript).*", "anomaly_xss", "error"],
+#        ["request", "(?i).*(\\?-d|\\?-s|\\?-a|\\?-b|\\?-w).*", "anomaly_php_cgi", "error"],
+#        ["request", "(?i).*(char\\(\\d+\\)).*", "anomaly_mssql_injection", "error"],
+#        ["response", "(500|501|503)", "anomaly_server_error", "error"],
+#        ["request", "(?i).*(select.*from.*(where)?|insert|union).*", "anomaly_sql_injection", "error"],
+#      ]
+#
+
+
+#- type: random-anomaly-detection
+#  token: "*"
+#  require:
+#    - "global.type match ^apache_access|nginx_access$"
+#  args:
+#    - percentage: 5.0
+#      distribution: [["error", "10"], ["unknown", "20"], ["warn", "30"], ["info", "40"]]
+#      anomalies: ["anomaly_demo"]
