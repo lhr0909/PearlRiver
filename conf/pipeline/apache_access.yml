@@ -1,22 +1,27 @@
 - type: pattern
   token: "*"
   target: message
+#  types: ["apache_access"]
 
 - type: geoip
   token: "*"
   target: clientip
+#  types: ["apache_access"]
 
 - type: timestamp
   target: timestamp
   token: "*"
+#  types: ["apache_access"]
 
 - type: user-agent
   target: agent
   token: "*"
+#  types: ["apache_access"]
 
 - type: split
   target: request
   token: "*"
+#  types: ["apache_access"]
   args:
       delimiter: "\\?"
       max_split: "2"
@@ -27,6 +32,7 @@
 - type: kv
   target: request_params
   token: "*"
+#  types: ["apache_access"]
   field:
     - prefix: "request_param_"
   args:
@@ -47,47 +53,7 @@
 #        ["request", "(?i).*(select.*from.*(where)?|insert|union).*", "anomaly_sql_injection", "error"],
 #      ]
 #
-#- type: regex-based-anomaly-detection
-#  token: "*"
-#  require:
-#    - "global.type==apache_error"
-#  args:
-#    - params: [
-#        ["msg", "(?i).*(exit signal segmentation fault).*", "anomaly_segmentation_fault", "error"],
-#        ["msg", "(?i).*((denied by server configuration)|((file does not exist)|(failed to open stream: no such file or directory))).*", "anomaly_denied", "warn"],
-#        ["msg", "(?i).*(client sent malformed host header).*", "anomaly_code_red", "error"],
-#        ["msg", "(?i).*((authentication failed)|((user .* not found)|(user .* in realm .* not found))|(authentication failure)).*", "anomaly_authentication", "warn"],
-#        ["msg", "(?i).*((invalid uri in request)|((file name too long)|(request failed: uri too long))).*", "anomaly_illegal_url", "warn"],
-#      ]
-#
-#- type: regex-based-anomaly-detection
-#  token: "*"
-#  require:
-#    - "global.type==nginx_error"
-#  args:
-#    - params: [
-#        ["errormsg", "(?i).*(exit signal segmentation fault).*", "anomaly_segmentation_fault", "error"],
-#        ["errormsg", "(?i).*((denied by server configuration)|((file does not exist)|(failed to open stream: no such file or directory))).*", "anomaly_denied", "warn"],
-#        ["errormsg", "(?i).*(client sent malformed host header).*", "anomaly_code_red", "error"],
-#        ["errormsg", "(?i).*((authentication failed)|((user .* not found)|(user .* in realm .* not found))|(authentication failure)).*", "anomaly_authentication", "warn"],
-#        ["errormsg", "(?i).*((invalid uri in request)|((file name too long)|(request failed: uri too long))).*", "anomaly_illegal_url", "warn"],
-#      ]
 
-#目前无法对MySQL日志做异常检测,因为Pipeline目前所处理的日志种类中不包含此种日志。
-#另外,如下所提供的规则的准确性亦存疑。
-#- type: regex-based-anomaly-detection
-#  token: "*"
-#  require:
-#    - "global.type==mysql_error"
-#  args:
-#    - params: [
-#        ["", "(?i).*(MySQL log: \\d+ \\S+ \\d+ Connect).*", "anomaly_mysql_succeed", "info"],
-#        ["", "(?i).*(Access denied for user).*", "anomaly_mysql_fail", "warn"],
-#        ["", "(?i).*(MySQL log: \\d+ \\S+ \\d+ Query).*", "anomaly_mysql_query", "info"],
-#        ["", "(?i).*((mysqld ended)|(shutdown complete)).*", "anomaly_mysql_shutdown", "error"],
-#        ["", "(?i).*((mysqld started)|(mysqld restarted)).*", "anomaly_mysql_start", "info"],
-#        ["", "(?i).*((MySQL log: \\d+ \\S+ \\d+ \\[ERROR\\])|(Fatal error:)).*", "anomaly_mysql_error", "error"],
-#      ]
 
 #- type: random-anomaly-detection
 #  token: "*"

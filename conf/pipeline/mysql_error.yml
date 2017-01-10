@@ -1,0 +1,59 @@
+- type: pattern
+  token: "*"
+  target: message
+#  types: ["mysql_error"]
+
+- type: geoip
+  token: "*"
+  target: clientip
+#  types: ["mysql_error"]
+
+- type: timestamp
+  target: timestamp
+  token: "*"
+#  types: ["mysql_error"]
+
+- type: user-agent
+  target: agent
+  token: "*"
+#  types: ["mysql_error"]
+
+- type: split
+  target: request
+  token: "*"
+#  types: ["mysql_error"]
+  args:
+      delimiter: "\\?"
+      max_split: "2"
+      names:
+        - "request_path"
+        - "request_params"
+
+- type: kv
+  target: request_params
+  token: "*"
+#  types: ["mysql_error"]
+  field:
+    - prefix: "request_param_"
+  args:
+      delimiter: "&"
+      sub_delimiter: "="
+
+
+
+#目前无法对MySQL日志做异常检测,因为Pipeline目前所处理的日志种类中不包含此种日志。
+#另外,如下所提供的规则的准确性亦存疑。
+#- type: regex-based-anomaly-detection
+#  token: "*"
+#  require:
+#    - "global.type==mysql_error"
+#  args:
+#    - params: [
+#        ["", "(?i).*(MySQL log: \\d+ \\S+ \\d+ Connect).*", "anomaly_mysql_succeed", "info"],
+#        ["", "(?i).*(Access denied for user).*", "anomaly_mysql_fail", "warn"],
+#        ["", "(?i).*(MySQL log: \\d+ \\S+ \\d+ Query).*", "anomaly_mysql_query", "info"],
+#        ["", "(?i).*((mysqld ended)|(shutdown complete)).*", "anomaly_mysql_shutdown", "error"],
+#        ["", "(?i).*((mysqld started)|(mysqld restarted)).*", "anomaly_mysql_start", "info"],
+#        ["", "(?i).*((MySQL log: \\d+ \\S+ \\d+ \\[ERROR\\])|(Fatal error:)).*", "anomaly_mysql_error", "error"],
+#      ]
+

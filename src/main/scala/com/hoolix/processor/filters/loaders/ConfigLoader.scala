@@ -5,6 +5,13 @@ package com.hoolix.processor.filters.loaders
 //import com.hoolix.processor.filters.Filter
 //import com.hoolix.processor.models.PipelineDBConfig
 import com.hoolix.processor.utils.{Converter}
+import java.util.regex.Pattern
+
+import com.avaje.ebean.{Ebean, RawSqlBuilder}
+import com.hoolix.processor.filters._
+import com.hoolix.processor.models.{Event}
+import com.hoolix.processor.utils.{Converter}
+import org.apache.commons.lang3.StringEscapeUtils
 
 /**
   * Hoolix 2017
@@ -47,6 +54,12 @@ case class RawConfigEntry(token  : String,
 
 
 object ConfigLoader  {
+
+
+  def build_from_local(filename: String): Map[String, Map[String, Seq[(Seq[(Event) => Boolean], Filter)]]] = {
+        val configs = load_from_yaml(filename)
+        build_filter(configs)
+  }
 
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
@@ -144,166 +157,111 @@ object ConfigLoader  {
     parse_raw_config_list(user_config)
   }
 
-
-//  /**
-//    * load all
-//    */
-//  def load_from_database(conf:Config) : ConfigPipeline = {
-//
-//    EbeanUtil.configure(conf)
-//
-//    val latest_configs = load_filters_from_database(conf)
-//    latest_configs.foreach( config => {
-//      println(config.id)
-//    })
-//    load_from_db_config(latest_configs)
-//  }
-//
-//  /***
-//    *
-//    * @param conf
-//    * @param user_id        default all user
-//    * @param message_type   default all type
-//    * @param version        default latest version
-//    * @return
-//    */
-//  def load_from_database(conf:Config, user_id:String = "", message_type:String="", version:Long = -1, config_id:String = "") : ConfigPipeline = {
-//
-//    EbeanUtil.configure(conf)
-//
-//    logger.info(s"load pipeline from database user_id:$user_id type:$message_type version:$version")
-//
-//    var expression = PipelineDBConfig.find.where()
-//
-//    if (StringUtils.isNotBlank(user_id)) {
-//      expression = expression.eq("user_id", user_id)
-//    }
-//
-//    if (!StringUtils.isBlank(config_id)) {
-//      expression = expression.eq("id", config_id)
-//
-//    }
-//    else {
-//      if (StringUtils.isNotBlank(message_type)) {
-//        expression = expression.eq("message_type", message_type)
-//      }
-//
-//      if (version != -1) {
-//        expression = expression.eq("version", version)
-//      }
-//    }
-//
-//    val all_configs = expression.findList()
-//
-//    load_from_db_config(all_configs)
-//  }
-
-//  /***
-//    * is_delete is false
-//    * version > 0
-//    */
-//
-//  lazy private val latest_version_config_sql = RawSqlBuilder.parse(
-//    """select message_type, max(version)
-//      | from pipeline_config
-//      | where is_delete = false and version > 0
-//      | group by message_type
-//    """.stripMargin)
-//    .columnMapping("message_type", "message_type")
-//    .columnMapping("max(version)", "version")
-//    .create()
-//
-//  def load_filters_from_database(conf:Config) : Seq[PipelineDBConfig] = {
-//    EbeanUtil.configure(conf)
-//    //val latest_configs = PipelineDBConfig.find.setRawSql(latest_version_config_sql).findList()
-//    val latest_configs = PipelineDBConfig.find.where().in(
-//      "(message_type, version)",
-//      Ebean.createQuery(classOf[PipelineDBConfig]) .setRawSql(latest_version_config_sql).where().query()
-//    ).findList()
-//
-//    latest_configs
-//  }
-//
-//  def load_from_db_config(all_configs: Seq[PipelineDBConfig]) = {
-//
-//    logger.info(s"loaded pipeline config: "+all_configs.mkString("\n"))
-//
-//    val latest_configs = all_configs
-//      //group by token
-//      .groupBy(_.user_id)
-//      .flatMap { case (user_id, entries) => {
-//        //group by type
-//        entries.groupBy(_.message_type).map { case (message_type, entries_each_type) =>
-//          //use largest version for each token/type
-//          entries_each_type.maxBy(_.version)
-//        }
-//      }}
-//    //database config line to RawConfigEntry:
-//
-//    val raw_config_list = latest_configs.flatMap { config   => config.entries.map { entry =>
-//      val jsonWriter = new ObjectMapper()
-//
-//      val source_option : Map[String,Any] = entry.source_option match {
-//        case null | "" => Map()
-//        case s         => Converter.java_any_to_scala(new Yaml().load(s)).asInstanceOf[Map[String,Any]]
-//      }
-//
-//      RawConfigEntry(
-//        token       = config.user_id  ,
-//        name        = entry.name,
-//        pool        = source_option.getOrElse("pool", "global").toString,
-//        config_type = entry.`type`,
-//        types       = Seq(config.message_type),
-//        target      = entry.source_field,
-//        field       = jsonWriter.writeValueAsString(entry.target_option),
-//        require     = jsonWriter.writeValueAsString(entry.requires),
-//        args        = entry.argument match {
-//          case null => ""
-//          case _    => Converter.java_any_to_scala(new Yaml().load(entry.argument))
-//        },
-//        orders      = entry.orders.toString,
-//        version     = config.version
-//      )
-//    }
-//    }.toSeq
-//
-//    parse_raw_config_list(raw_config_list)
-//  }
-
   implicit val formats = DefaultFormats
 
-  def load_from_json(json_str:String) = {
-    val root = JsonMethods.parse(json_str)
 
-    println(json_str)
-    val configs = root.children
-      .map { case node => {
-        val jsonWriter = new ObjectMapper()
-
-        val config_type = (node \ "type").extractOrElse("")
-        if (StringUtils.isBlank(config_type))
-          throw new ConfigCheckFailException("config_type is required to parse")
-
-        try {
-          RawConfigEntry(
-            token = (node \ "user_id").extractOrElse("*"),
-            name = (node \ "name").extractOrElse(""),
-            pool = (node \ "source_option" \ "pool").extractOrElse(null),
-            config_type = (node \ "type").extractOrElse(""),
-            record_type = (node \ "message_type").extractOrElse(""),
-            types = Seq((node \ "message_type").extractOrElse("")),
-            target = (node \ "source_field").extractOrElse(""),
-            field = jsonWriter.writeValueAsString((node \ "target_option").extractOrElse(null)),
-            require = jsonWriter.writeValueAsString((node \ "requires").extractOrElse(null)),
-            args = Converter.java_any_to_scala(new Yaml().load((node \ "argument").extractOrElse("")))
-          )
-        } catch {
-          case e =>
-            e.printStackTrace()
-            throw new ConfigCheckFailException(s"error while load config [$config_type]")
+  private def build_require(entry : ConfigEntry) = {
+    // 如果require为null
+    entry.require.conditions.map { case condition =>
+      condition.op match {
+        case ConditionOp.Exist    => (event: Event) => { event.toPayload.contains(condition.key) } //TODO no pool can not handle x.y.z
+        case ConditionOp.NotExist => (event: Event) => { !event.toPayload.contains(condition.key) }
+        case ConditionOp.Equal    => (event: Event) => { event.toPayload.getOrElse(condition.key, "") == condition.value }
+        case ConditionOp.NotEqual => (event: Event) => { event.toPayload.getOrElse(condition.key, "") != condition.value }
+        case ConditionOp.Match    => (event: Event) => { event.toPayload(condition.key).asInstanceOf[String].matches(condition.value) }
+        case ConditionOp.NotMatch => (event: Event) => { event.toPayload(condition.key).asInstanceOf[String].matches(condition.value) }
+        case ConditionOp.Find     => {
+          val pat = Pattern.compile(condition.value)
+          (event: Event) => { pat.matcher(event.toPayload.getOrElse(condition.key, "").asInstanceOf[CharSequence]).find() }
         }
+        case ConditionOp.NotFind     => {
+          val pat = Pattern.compile(condition.value)
+          (event: Event) => { !pat.matcher(event.toPayload.getOrElse(condition.key, "").asInstanceOf[CharSequence]).find() }
+        }
+        case ConditionOp.True     => (event: Event) => { true }
+        case ConditionOp.False    => (event: Event) => { false }
       }
-      }
-    parse_raw_config_list(configs)
+    }
+  }
+
+
+  // TODO use config implicit???
+  private def build_filter(entry : ConfigEntry) : Filter = {
+    //gererate entry name
+    val cfg = StringUtils.isBlank(entry.name) match {
+      case true =>
+        FilterConfig(
+          name = entry.`type`,
+          pool = entry.pool,
+          target = entry.target,
+          field_prefix = entry.field_prefix,
+          field_types =  entry.field_types
+        )
+      case false =>
+        FilterConfig(
+          name = entry.name.trim,
+          pool = entry.pool,
+          target = entry.target,
+          field_prefix = entry.field_prefix,
+          field_types =  entry.field_types
+        )
+    }
+
+
+    val filter = entry match {
+      case entry:PatternConfigEntry   => PatternParser(cfg.target._2, entry.matches, entry.patterns, "conf/patterns") // TODO
+      case entry:GeoConfigEntry       => GeoParser(cfg.target._2, "conf/GeoLite2-City.mmdb") //TODO
+      case entry:TimestampConfigEntry => DateFilter(cfg.target._2, entry.from_formats, entry.to_format)
+      case entry:KVConfigEntry        => KVFilter(cfg.target._2, entry.delimiter, entry.sub_delimiter)
+      case entry:SplitConfigEntry     => SplitFilter(cfg.target._2, entry.delimiter, entry.max_split, entry.names)
+//      case entry:MutateConfigEntry    => MutateFilter(cfg.target._2, entry.cmds)
+      case entry:UserAgentConfigEntry => HttpAgentFilter(cfg.target._2)
+      case entry:RandomAnomalyDetectionConfigEntry => RandomAnomalyDetectionFilter(entry.percentage, entry.distribution, entry.anomalies)
+//      case entry:XmlConfigEntry       => XmlFilter(cfg, entry.paths, entry.max_level)
+//      case entry:JsonConfigEntry      => JsonFilter(cfg, entry.paths, entry.max_level)
+      case entry:RegexBasedAnomalyDetectionConfigEntry => RegexBasedAnomalyDetectionFilter(entry.params)
+      case entry:FilterConfig         => throw new IllegalStateException("config entry has no filter, unreachable code")
+      case _ => logger.error("unknown entry: " + entry); null
+    }
+
+//    filter.file_resolvers = conf.spark_xyz_conf_file_resolver_list
+    filter
+  }
+
+  def build_filter(pipe : ConfigPipeline): Map[String, Map[String, Seq[(Seq[(Event) => Boolean], Filter)]]] = {
+
+    val filter_map =
+      pipe.config.map { case (token, type_entrys) => token -> {
+        val each_type = type_entrys.map { case (typ, (version, entrys)) => typ -> {
+          val build_entries = entrys.flatMap { entry =>
+            Some(build_require(entry) -> build_filter(entry))
+          }
+          build_entries
+
+        }}
+        each_type
+      }}
+
+
+    //TODO remove default map
+
+    filter_map
+  }
+
+
+
+}
+
+case class FilterConfig(
+                         target : (String,String), //variable pool -> field_name
+                         name   : String = "", //filter name, should be unique
+                         pool   : String = "", //variable pool
+                         field_prefix:String = "",
+                         field_types:Map[String,String] = Map()
+                       )
+{
+
+  override def toString: String = {
+    s"target:$target; name:$name; pool:$pool; prefix:$field_prefix; types:$field_types"
   }
 }
