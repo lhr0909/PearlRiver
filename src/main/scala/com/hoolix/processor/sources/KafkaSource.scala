@@ -34,10 +34,11 @@ object KafkaSource {
 
   def apply(
              parallelism: Int,
-             kafkaTopics: Set[String]
+             kafkaTopic: String
            )(implicit config: Config, system: ActorSystem): Source[KafkaTransmitted, Consumer.Control] = {
 
-    Consumer.committableSource(KafkaConsumerSettings(), Subscriptions.topics(kafkaTopics))
+    //FIXME: rolling back to single topic per stream for now, need more fine-grained control
+    Consumer.committableSource(KafkaConsumerSettings(), Subscriptions.topics(Set(kafkaTopic)))
       .mapAsync(parallelism)(KafkaSource.convertToEvent)
 
   }

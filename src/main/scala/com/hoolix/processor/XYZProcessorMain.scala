@@ -20,7 +20,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.kafka.scaladsl.Consumer.Control
 import akka.stream.{ActorMaterializer, KillSwitch}
-import com.hoolix.processor.http.routes.OfflineQueryRoutes
+import com.hoolix.processor.http.routes.{OfflineQueryRoutes, StreamControlRoutes}
 import com.hoolix.processor.modules.{ElasticsearchClient, KafkaConsumerSettings}
 import com.hoolix.processor.streams.KafkaToEsStream
 import com.typesafe.config.ConfigFactory
@@ -45,16 +45,12 @@ object XYZProcessorMain extends App {
   override def main(args: Array[String]): Unit = {
     implicit val config = ConfigFactory.parseFile(new File("conf/application.conf"))
 
-
     val decider: Supervision.Decider = { e =>
       logger.error("Unhandled exception in stream", e)
       e.printStackTrace()
 //      logger.error(e.printStackTrace())
       Supervision.Stop
     }
-
-
-
 
     implicit val system = ActorSystem("xyz-processor", config)
     val materializerSettings = ActorMaterializerSettings(system).withSupervisionStrategy(decider)
@@ -64,36 +60,11 @@ object XYZProcessorMain extends App {
 
     val esClient = ElasticsearchClient()
 
-    var kafkaControl: Control = null
-
-    val stream = KafkaToEsStream(
-      parallelism = 20,
-      esClient,
-      Set("hooli_topic")
-    )
-
     val httpConfig = config.getConfig("http")
 
     val route: Route = pathSingleSlash {
       complete("后端程序还活着！")
-    } ~ OfflineQueryRoutes() ~
-    path("start") {
-//      val (esBulkProcessor, kafkaControl) = stream.run()
-      kafkaControl = stream.run()
-      complete("pipeline started")
-    } ~
-    path("stop") {
-      println(s"Shutting down Kafka Source now... - " + Instant.now)
-      kafkaControl match {
-        case a: Control =>
-          //TODO: need to figure out a mechanism to wait on shutdown, otherwise it is better to use BulkProcessor
-          onSuccess(a.stop()) { extraction =>
-            complete("done")
-          }
-        case _ => complete("no stream started, but ok")
-      }
-    }
-
+    } ~ OfflineQueryRoutes() ~ StreamControlRoutes(esClient)
 
     val bindAddress = httpConfig.getString("bind-address")
     val bindPort = httpConfig.getInt("bind-port")
