@@ -49,11 +49,10 @@ object XYZProcessorMain extends App {
     val decider: Supervision.Decider = { e =>
       logger.error("Unhandled exception in stream", e)
       e.printStackTrace()
-//      logger.error(e.printStackTrace())
       Supervision.Stop
     }
 
-
+//    val decider: Supervision.Decider = Supervision.resumingDecider
 
 
     implicit val system = ActorSystem("xyz-processor", config)
@@ -67,9 +66,9 @@ object XYZProcessorMain extends App {
     var kafkaControl: Control = null
 
     val stream = KafkaToEsStream(
-      parallelism = 20,
+      parallelism = 1,
       esClient,
-      Set("hooli_topic")
+      Set("test_topic3")
     )
 
     val httpConfig = config.getConfig("http")

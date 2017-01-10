@@ -211,7 +211,7 @@ object ConfigLoader  {
     val filter = entry match {
       case entry:PatternConfigEntry   => PatternParser(cfg.target._2, entry.matches, entry.patterns, "conf/patterns") // TODO
       case entry:GeoConfigEntry       => GeoParser(cfg.target._2, "conf/GeoLite2-City.mmdb") //TODO
-      case entry:TimestampConfigEntry => DateFilter(cfg.target._2, entry.from_formats, entry.to_format)
+      case entry:TimestampConfigEntry => DateFilter(cfg.target._2, entry.from_formats)
       case entry:KVConfigEntry        => KVFilter(cfg.target._2, entry.delimiter, entry.sub_delimiter)
       case entry:SplitConfigEntry     => SplitFilter(cfg.target._2, entry.delimiter, entry.max_split, entry.names)
 //      case entry:MutateConfigEntry    => MutateFilter(cfg.target._2, entry.cmds)

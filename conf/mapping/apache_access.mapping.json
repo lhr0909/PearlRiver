@@ -1,0 +1,101 @@
+{
+  "_all": {
+    "enabled": true,
+    "omit_norms": true
+  },
+  "properties": {
+    "token": {
+      "type": "keyword"
+    },
+    "tags": {
+      "type": "keyword"
+    },
+    "upload_type": {
+      "type": "keyword"
+    },
+    "upload_timestamp": {
+      "type": "date"
+    },
+    "clientip": {
+      "type": "ip"
+    },
+    "ident": {
+      "type": "keyword"
+    },
+    "auth": {
+      "type": "keyword"
+    },
+    "event_timestamp": {
+      "type": "date"
+    },
+    "verb": {
+      "type": "keyword"
+    },
+    "request": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "request_path": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "request_params": {
+
+    },
+    "httpversion": {
+      "type": "keyword"
+    },
+    "rawrequest": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "response": {
+      "type": "integer"
+    },
+    "bytes": {
+      "type": "integer"
+    },
+    "referrer": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "agent": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "forwarder": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "filter_timestamp": {
+      "type": "date"
+    },
+    "index_timestamp": {
+      "type": "date"
+    }
+  }
+}

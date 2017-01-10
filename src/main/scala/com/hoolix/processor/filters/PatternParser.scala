@@ -158,6 +158,7 @@ case class PatternParser(targetField: String,
 
 
   override def handle(event: Event): Event = {
+    println("in pattern filter")
 //    println(event)
     val payload = event.toPayload
     val types   =  {
@@ -177,9 +178,9 @@ case class PatternParser(targetField: String,
       }
     }
 
-//    println("=====in pattern filter handle")
-//    println(payload)
-//    println(types)
+    println("=====in pattern filter handle")
+    println(payload)
+    println(types)
     val message = payload.get(targetField).asInstanceOf[Some[String]].get
 //    println(message)
 //    println(compiled_patterns)
@@ -211,8 +212,8 @@ case class PatternParser(targetField: String,
 //    logger.warn("grok failed: (" + message + ") try types: " + types + " " + ctx.all())
 //    ctx.metric(MetricTypes.metric_pattern_fail)
 //    Left(null)
-//    println("create IntermediateEvent from payload")
-//    println(payload)
+    println("create IntermediateEvent from payload")
+    println(payload)
     IntermediateEvent(payload)
   }
 
