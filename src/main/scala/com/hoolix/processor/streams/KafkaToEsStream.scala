@@ -33,7 +33,7 @@ object KafkaToEsStream {
            )(implicit config: Config, system: ActorSystem, ec: ExecutionContext): KafkaToEsStream =
     new KafkaToEsStream(parallelism, esClient, kafkaTopic, config, system, ec)
 
-  def stopStream(kafkaTopic: String): Unit = {
+  def stopStream(kafkaTopic: String)(implicit ec: ExecutionContext): Unit = {
     streamCache(kafkaTopic).stop() onSuccess {
       case Done => streamCache.remove(kafkaTopic)
     }

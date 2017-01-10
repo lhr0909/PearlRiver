@@ -7,7 +7,6 @@ package com.hoolix.processor.filters.loaders
 import com.hoolix.processor.utils.{Converter}
 import java.util.regex.Pattern
 
-import com.avaje.ebean.{Ebean, RawSqlBuilder}
 import com.hoolix.processor.filters._
 import com.hoolix.processor.models.{Event}
 import com.hoolix.processor.utils.{Converter}
