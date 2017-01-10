@@ -17,8 +17,8 @@ case class  FileBeatDecoder() extends Decoder {
     //TODO: decide what to return when types don't match (should we really return _unknown_ ?
 
     val token = payload.get("fields") match {
-      case Some(map: Map[String, String]) =>
-        map.get("token") match {
+      case Some(map) =>
+        map.asInstanceOf[Map[String, String]].get("token") match {
           case Some(x: String) => x
           case _ => "_unknown_"
         }
@@ -26,7 +26,7 @@ case class  FileBeatDecoder() extends Decoder {
     }
 
     val tags = payload.get("tags") match {
-      case Some(seq: Seq[String]) => seq
+      case Some(seq) => seq.asInstanceOf[Seq[String]]
       case _ => Seq[String]()
     }
 

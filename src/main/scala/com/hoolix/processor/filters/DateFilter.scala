@@ -22,11 +22,11 @@ object DateFilter {
   }
 }
 case class DateFilter(targetField: String,
-                      dateTimeFormatterSettings: DateTimeFormatterSettings = ("yyyy-MM-dd'T'HH:mm:ss.SSSZ", "UTC", "en")
+                      dateTimeFormatterSettings: DateTimeFormatterSettings = ("yyyy-MM-dd'T'HH:mm:ss.SSSZ", "en", "UTC")
                      ) extends Filter {
 
   //TODO sort timestamp format
-  def parseTimestamp(timestamp_str: String): Try[DateTime] = Try(
+  def parseTimestampString(timestamp_str: String): Try[DateTime] = Try(
     DateFilter.dateTimeFormatter(dateTimeFormatterSettings)
       .parseDateTime(timestamp_str)
   )
@@ -36,7 +36,7 @@ case class DateFilter(targetField: String,
 
     val parsedTimestamp = payload.get(targetField) match {
       case Some(t: String) =>
-        parsedTimestamp(t) match {
+        parseTimestampString(t) match {
           case Success(dt: DateTime) => dt.getMillis
           case Failure(e) =>
             println("error parsing datetime - " + e.getMessage)

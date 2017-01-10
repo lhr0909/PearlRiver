@@ -2,6 +2,8 @@ package com.hoolix.processor.models
 
 import org.elasticsearch.action.index.IndexRequest
 
+import scala.collection.JavaConversions
+
 
 /**
   * Created by peiyuchao on 2017/1/6.
@@ -18,7 +20,7 @@ case class XYZBasicEvent(
   override def toPayload = collection.mutable.Map(
     "token" -> token,
     "type" -> `type`,
-    "tags" -> tags,
+    "tags" -> JavaConversions.asJavaCollection(tags),
     "message" -> message,
     "upload_type" -> uploadType,
     "upload_timestamp" -> uploadTimestamp

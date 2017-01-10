@@ -45,7 +45,7 @@ object KafkaToEsStream {
       val filterFlow = FilterFlow(parallelism, Seq[Filter](
         PatternParser("message"),
         GeoParser("clientip", "conf/GeoLite2-City.mmdb"),
-        DateFilter("timestamp"),
+        DateFilter("timestamp", ("dd/MMM/yyyy:HH:mm:ss Z", "en", "Asia/Shanghai")),
         HttpAgentFilter("agent"),
         SplitFilter("request", "\\?", 2, Seq("request_path", "request_params")),
         KVFilter("request_params", delimiter = "&")
