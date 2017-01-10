@@ -4,7 +4,7 @@ import com.hoolix.processor.models.{Event, IntermediateEvent}
 
 case class SplitFilter(targetField: String, delimiter: String, limit: Int = -1, names: Seq[String] = Seq()) extends Filter {
   override def handle(event: Event): Event = {
-//    println("in split filter")
+    println("in split filter")
 //    println(event)
     // TODO 如果解析失败
     val payload = event.toPayload

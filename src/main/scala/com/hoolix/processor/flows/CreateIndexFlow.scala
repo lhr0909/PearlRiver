@@ -10,8 +10,8 @@ import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.unit.TimeValue
 
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.io.Source
 
 /**
   * Hoolix 2017
@@ -28,10 +28,15 @@ object CreateIndexFlow {
   def defaultTimeout = new TimeValue(500, TimeUnit.MILLISECONDS)
 
   def apply(
-           parallelism: Int,
-           esClient: TransportClient
+             parallelism: Int,
+             esClient: TransportClient
            )(implicit ec: ExecutionContext): Flow[KafkaTransmitted, KafkaTransmitted, NotUsed] = {
     Flow[KafkaTransmitted].mapAsync[KafkaTransmitted](parallelism) { event =>
+      println("=============================================================")
+      println(event)
+      println(event.indexType)
+      val mapping = Source.fromFile("conf/mapping/" + event.indexType + ".mapping.json").mkString
+      println("read mapping")
       val p = Promise[KafkaTransmitted]()
 
       Future {
@@ -62,7 +67,6 @@ object CreateIndexFlow {
             p.success(event)
           }
         }
-
       }
 
       p.future

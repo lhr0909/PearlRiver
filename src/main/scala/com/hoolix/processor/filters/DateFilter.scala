@@ -22,12 +22,13 @@ object DateFilter {
   }
 }
 case class DateFilter(targetField: String,
-                      dateTimeFormatterSettings: DateTimeFormatterSettings = ("yyyy-MM-dd'T'HH:mm:ss.SSSZ", "en", "UTC")
+                      dateTimeFormatterSettings: Seq[DateTimeFormatterSettings] = Seq(("yyyy-MM-dd'T'HH:mm:ss.SSSZ", "en", "UTC"))
                      ) extends Filter {
 
   //TODO sort timestamp format
   def parseTimestampString(timestamp_str: String): Try[DateTime] = Try(
-    DateFilter.dateTimeFormatter(dateTimeFormatterSettings)
+    // TODO multi datetime formats
+    DateFilter.dateTimeFormatter(dateTimeFormatterSettings(0))
       .parseDateTime(timestamp_str)
   )
 

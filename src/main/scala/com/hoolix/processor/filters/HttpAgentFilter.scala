@@ -37,7 +37,7 @@ case class HttpAgentFilter(targetField: String) extends Filter{
 //    )
     payload.put("agent_browser", browser)
     payload.put("agent_os", os)
-//    println("in agent filter")
+    println("in agent filter")
 //    println(payload)
     IntermediateEvent(payload)
   }

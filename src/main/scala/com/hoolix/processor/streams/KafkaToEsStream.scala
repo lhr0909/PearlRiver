@@ -7,7 +7,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Keep, RunnableGraph}
 import com.hoolix.processor.decoders.FileBeatDecoder
 import com.hoolix.processor.filters.loaders.ConfigLoader
-import com.hoolix.processor.flows.DecodeFlow
+import com.hoolix.processor.flows.{CreateIndexFlow, DecodeFlow, FilterFlow}
 import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
 import com.hoolix.processor.sources.KafkaSource
 import com.typesafe.config.Config
@@ -77,6 +77,9 @@ object KafkaToEsStream {
 
       println(filtersMap)
 
+      val filterFlow = FilterFlow(parallelism, filtersMap)
+
+
 //      val filterFlow = FilterFlow(parallelism, Seq[Filter](
 //        PatternParser("message"),
 //        GeoParser("clientip", "conf/GeoLite2-City.mmdb"),
@@ -88,7 +91,8 @@ object KafkaToEsStream {
 
       kafkaSource
         .viaMat(decodeFlow.toFlow)(Keep.left)
-//        .viaMat(filterFlow.toFlow)(Keep.left)
+        .viaMat(filterFlow.toFlow)(Keep.left)
+        .viaMat(CreateIndexFlow(parallelism, esClient))(Keep.left)
         .toMat(esSink.sink)(Keep.left)
     }
 

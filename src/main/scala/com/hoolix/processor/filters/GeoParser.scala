@@ -15,6 +15,7 @@ case class GeoParser(targetField: String, geofile:String = "") extends Filter{
 
   def parseResp(ip:String) = {
         val address = InetAddress.getByName(ip)
+        println(address)
         reader.city(address)
     }
 
@@ -33,39 +34,44 @@ case class GeoParser(targetField: String, geofile:String = "") extends Filter{
     }
 
     override def handle(event: Event): Event = {
-//      println(event)
+      println("in geo filter")
+      println(event)
       val payload = event.toPayload
-//      println(payload)
+      println(payload)
       val ip = payload.get(targetField).asInstanceOf[Some[String]].get
+      println(ip)
+      if (ip != "127.0.0.1") {
+        val resp = parseResp(ip)
+        println(resp)
+        payload.put("city", resp.getCity.getName)
+        payload.put("country", resp.getCountry.getName)
+        payload.put("continent", resp.getContinent.getName)
 
-      val resp = parseResp(ip)
-      payload.put("city", resp.getCity.getName)
-      payload.put("country", resp.getCountry.getName)
-      payload.put("continent", resp.getContinent.getName)
-//      println("in geo filter")
-//      println(payload)
+        //      println(payload)
 
+
+        //      try {
+        //        ip match {
+        //          case null => Left(null)
+        //          case _ => parseResp(ip) match {
+        //            case null =>
+        //              ctx.metric(MetricTypes.metric_geo_fail)
+        //              Left(new Exception("error"))
+        //            case resp =>
+        //              Right(
+        //                Seq(
+        //                  ("city", resp.getCity.getName),
+        //                  ("country", resp.getCountry.getName),
+        //                  ("continent", resp.getContinent.getName)
+        //                )
+        //              )
+        //          }
+        //        }
+        //      } catch {
+        //        case e : com.maxmind.geoip2.exception.AddressNotFoundException =>
+        //          Left(e)
+        //      }
+      }
       IntermediateEvent(payload)
-//      try {
-//        ip match {
-//          case null => Left(null)
-//          case _ => parseResp(ip) match {
-//            case null =>
-//              ctx.metric(MetricTypes.metric_geo_fail)
-//              Left(new Exception("error"))
-//            case resp =>
-//              Right(
-//                Seq(
-//                  ("city", resp.getCity.getName),
-//                  ("country", resp.getCountry.getName),
-//                  ("continent", resp.getContinent.getName)
-//                )
-//              )
-//          }
-//        }
-//      } catch {
-//        case e : com.maxmind.geoip2.exception.AddressNotFoundException =>
-//          Left(e)
-//      }
     }
 }

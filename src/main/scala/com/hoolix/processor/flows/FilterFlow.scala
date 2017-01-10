@@ -14,6 +14,7 @@ import scala.concurrent.Future
 case class FilterFlow(parallelism: Int, filters: Map[String, Map[String, Seq[(Seq[(Event) => Boolean], Filter)]]]) {
   def toFlow: Flow[KafkaTransmitted, KafkaTransmitted, NotUsed] = {
     Flow[KafkaTransmitted].mapAsync(parallelism)((kafkaTransmitted: KafkaTransmitted) => {
+      println("enter filter flow???")
       var filtered: Event = kafkaTransmitted.event
       val payload = filtered.toPayload
 //      filters.getOrElse(payload("token").asInstanceOf[String], filters("*"))
@@ -28,6 +29,7 @@ case class FilterFlow(parallelism: Int, filters: Map[String, Map[String, Seq[(Se
         if (required) filtered = elem._2.handle(filtered)
       }
 //      filters.foreach((filter) => filtered = filter.handle(filtered)) // should be sequential
+      println("finish filter flow???")
       Future.successful(KafkaTransmitted(kafkaTransmitted.committableOffset, filtered))
     })
   }

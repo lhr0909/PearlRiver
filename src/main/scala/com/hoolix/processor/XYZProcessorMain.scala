@@ -2,34 +2,16 @@ package com.hoolix.processor
 
 import java.io.File
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 
-import org.slf4j.LoggerFactory
 import akka.actor.ActorSystem
-import akka.kafka.ConsumerSettings
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
-import com.hoolix.processor.decoders.FileBeatDecoder
-import com.hoolix.processor.filters.Filter
-import com.hoolix.processor.flows.{DecodeFlow, FilterFlow}
-import akka.stream.scaladsl.{Keep, Sink, Source}
-import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
-import com.hoolix.processor.sources.KafkaSource
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.kafka.scaladsl.Consumer.Control
-import akka.stream.{ActorMaterializer, KillSwitch}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.hoolix.processor.http.routes.{OfflineQueryRoutes, StreamControlRoutes}
-import com.hoolix.processor.modules.{ElasticsearchClient, KafkaConsumerSettings}
-import com.hoolix.processor.streams.KafkaToEsStream
+import com.hoolix.processor.modules.ElasticsearchClient
 import com.typesafe.config.ConfigFactory
-import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
-import org.elasticsearch.common.logging.Loggers
-import org.elasticsearch.common.settings.Settings
-import org.elasticsearch.common.transport.InetSocketTransportAddress
-import org.elasticsearch.transport.client.PreBuiltTransportClient
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -48,7 +30,6 @@ object XYZProcessorMain extends App {
     val decider: Supervision.Decider = { e =>
       logger.error("Unhandled exception in stream", e)
       e.printStackTrace()
-//      logger.error(e.printStackTrace())
       Supervision.Stop
     }
 
