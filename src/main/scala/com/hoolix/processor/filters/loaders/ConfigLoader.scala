@@ -4,12 +4,13 @@ package com.hoolix.processor.filters.loaders
 //import com.hoolix.processor.configuration.Config
 //import com.hoolix.processor.filters.Filter
 //import com.hoolix.processor.models.PipelineDBConfig
-import com.hoolix.processor.utils.{Converter}
+import com.hoolix.processor.utils.Converter
 import java.util.regex.Pattern
 
 import com.hoolix.processor.filters._
-import com.hoolix.processor.models.{Event}
-import com.hoolix.processor.utils.{Converter}
+import com.hoolix.processor.flows.FilterFlow.FilterMatchingRule
+import com.hoolix.processor.models.Event
+import com.hoolix.processor.utils.Converter
 import org.apache.commons.lang3.StringEscapeUtils
 
 /**
@@ -51,15 +52,12 @@ case class RawConfigEntry(token  : String,
                           version: Long   = 0
                          )
 
-
 object ConfigLoader  {
 
-
-  def build_from_local(filename: String): Map[String, Map[String, Seq[(Seq[(Event) => Boolean], Filter)]]] = {
-        val configs = load_from_yaml(filename)
-        build_filter(configs)
+  def build_from_local(filename: String): Map[String, Map[String, Seq[FilterMatchingRule]]] = {
+    val configs = load_from_yaml(filename)
+    build_filter(configs)
   }
-
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -227,7 +225,7 @@ object ConfigLoader  {
     filter
   }
 
-  def build_filter(pipe : ConfigPipeline): Map[String, Map[String, Seq[(Seq[(Event) => Boolean], Filter)]]] = {
+  def build_filter(pipe : ConfigPipeline): Map[String, Map[String, Seq[FilterMatchingRule]]] = {
 
     val filter_map =
       pipe.config.map { case (token, type_entrys) => token -> {

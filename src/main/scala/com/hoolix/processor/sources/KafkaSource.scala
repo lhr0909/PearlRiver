@@ -18,17 +18,10 @@ import scala.concurrent.Future
 object KafkaSource {
 
   def convertToEvent(committableMessage: CommittableMessage[Array[Byte], String]): Future[KafkaTransmitted] = {
-//    val Event = new EventBuilder()
-//      .setCommittableOffset(committableMessage.committableOffset)
-//      .setEvent(FileBeatEvent.fromJsonString(committableMessage.record.value))
-//      .build()
-//    Event()
-//    println(committableMessage)
-    val event = KafkaTransmitted(committableMessage.committableOffset, FileBeatEvent.fromJsonString(committableMessage.record.value))
-//    println(event)
-//    val event = KafkaTransmitted(committableMessage.committableOffset, LineEvent(committableMessage.record.value))
-
-    //    val event = new FileBeatEvent(committableMessage.committableOffset, committableMessage.record.value)
+    val event = KafkaTransmitted(
+      committableMessage.committableOffset,
+      FileBeatEvent.fromJsonString(committableMessage.record.value)
+    )
     Future.successful(event)
   }
 
