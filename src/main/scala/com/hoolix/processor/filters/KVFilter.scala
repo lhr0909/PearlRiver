@@ -29,7 +29,7 @@ case class KVFilter(targetField: String, delimiter: String="\\s+", subDelimiter:
             }
           }}
           if (kvs.size != 0) {
-            payload.put(targetField + "_map", JavaConversions.asJavaCollection(kvs))
+            payload.put(targetField + "_map", JavaConversions.mutableMapAsJavaMap(kvs))
           }
 
         }
