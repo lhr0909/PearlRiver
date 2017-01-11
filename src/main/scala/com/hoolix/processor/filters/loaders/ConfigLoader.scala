@@ -108,13 +108,14 @@ object ConfigLoader  {
       logger.warn("no type found")
     }
 
+    //TODO: move this to use Try()
     try {
       ConfigEntryBuilder.build_from_raw(typ, raw_config)
     }catch {
-      case e:ConfigEntryCheckFailException =>
+      case e: ConfigEntryCheckFailException =>
         throw e
 
-      case e =>
+      case e: Exception =>
         e.printStackTrace()
         throw new ConfigEntryCheckFailException(typ, raw_config.name, "parse error")
     }

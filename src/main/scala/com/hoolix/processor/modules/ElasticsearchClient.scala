@@ -32,4 +32,18 @@ object ElasticsearchClient {
 
     esClient
   }
+
+  def esIndexCreationSettings()(implicit config: Config): Settings.Builder = {
+    val esConfig = config.getConfig("elasticsearch")
+
+    val settingsBuilder = Settings.builder()
+
+    JavaConversions.asScalaSet(esConfig.entrySet()) foreach { entry =>
+      if (entry.getKey.startsWith("index")) {
+        settingsBuilder.put(entry.getKey, esConfig.getString(entry.getKey))
+      }
+    }
+
+    settingsBuilder
+  }
 }

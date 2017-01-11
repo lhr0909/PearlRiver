@@ -48,7 +48,15 @@
       }
     },
     "request_params": {
-
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "request_params_map": {
+      "type": "object"
     },
     "httpversion": {
       "type": "keyword"

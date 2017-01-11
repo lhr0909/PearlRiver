@@ -3,18 +3,23 @@ package com.hoolix.processor.filters
 
 import com.hoolix.processor.models.{Event, IntermediateEvent}
 
+import scala.collection.JavaConversions
+
 case class KVFilter(targetField: String, delimiter: String="\\s+", subDelimiter: String="=") extends Filter {
 
   override def handle(event: Event): Event = {
     val payload = event.toPayload
-    if (subDelimiter != "") {
-      if (payload.contains(targetField)) {
-        val kvs = collection.mutable.Map[String, String]()
-        val field_value = payload.get(targetField).asInstanceOf[Some[String]].get
-        if (field_value != null && field_value != "") {
-          println(payload)
-          val words = field_value.split(delimiter)
 
+
+    if (payload.contains(targetField)) {
+
+      val field_value = payload.get(targetField).asInstanceOf[Some[String]].get
+      if (field_value != null && field_value != "") {
+
+        println(payload)
+        val words = field_value.split(delimiter)
+        if (subDelimiter != "") {
+          val kvs = collection.mutable.Map[String, String]()
           words.foreach { word => {
             val kv = word.split(subDelimiter, 2)
             kv.size match {
@@ -23,11 +28,16 @@ case class KVFilter(targetField: String, delimiter: String="\\s+", subDelimiter:
               case 2 => kvs.put(kv(0), kv(1)); println(kvs) // TODO prefix or nest
             }
           }}
+          if (kvs.size != 0) {
+            payload.put(targetField + "_map", JavaConversions.mutableMapAsJavaMap(kvs))
+          }
+
         }
-        println(payload)
-        payload.put(targetField, kvs)
+
       }
     }
+    println(payload)
+
     println("in kv filter")
     println(payload)
     IntermediateEvent(payload)

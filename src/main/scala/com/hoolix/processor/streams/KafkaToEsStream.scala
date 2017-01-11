@@ -8,6 +8,7 @@ import akka.stream.scaladsl.{Keep, RunnableGraph}
 import com.hoolix.processor.decoders.FileBeatDecoder
 import com.hoolix.processor.filters.loaders.ConfigLoader
 import com.hoolix.processor.flows.{CreateIndexFlow, DecodeFlow, FilterFlow}
+import com.hoolix.processor.modules.ElasticsearchClient
 import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
 import com.hoolix.processor.sources.KafkaSource
 import com.typesafe.config.Config
@@ -82,7 +83,11 @@ object KafkaToEsStream {
       kafkaSource
         .viaMat(decodeFlow)(Keep.left)
         .viaMat(filterFlow)(Keep.left)
-        .viaMat(CreateIndexFlow(parallelism, esClient))(Keep.left)
+        .viaMat(CreateIndexFlow(
+          parallelism,
+          esClient,
+          ElasticsearchClient.esIndexCreationSettings()
+        ))(Keep.left)
         .toMat(esSink.sink)(Keep.left)
     }
 
