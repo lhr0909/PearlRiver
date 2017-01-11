@@ -3,9 +3,9 @@ package com.hoolix.processor.sinks
 import akka.NotUsed
 import akka.kafka.ConsumerMessage.CommittableOffsetBatch
 import akka.stream.scaladsl.{Flow, Sink}
-import com.hoolix.processor.models.KafkaEvent
 import com.hoolix.elasticsearch.action.bulk.BulkProcessor.Listener
 import com.hoolix.elasticsearch.action.bulk.BulkProcessor
+import com.hoolix.processor.models.KafkaTransmitted
 import com.typesafe.config.Config
 import org.elasticsearch.action.bulk.{BackoffPolicy, BulkRequest, BulkResponse}
 import org.elasticsearch.client.transport.TransportClient
@@ -73,24 +73,24 @@ object ElasticsearchBulkProcessorSink {
         BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3)
       ).build()
 
-    def startingFlow: Flow[KafkaEvent, Seq[KafkaEvent], NotUsed] = {
+    def startingFlow: Flow[KafkaTransmitted, Seq[KafkaTransmitted], NotUsed] = {
       if (maxBulkSize < 0) {
-        Flow[KafkaEvent].conflateWithSeed(Seq(_))(_ :+ _)
+        Flow[KafkaTransmitted].conflateWithSeed(Seq(_))(_ :+ _)
       } else {
-        Flow[KafkaEvent].batch(maxBulkSize, Seq(_))(_ :+ _)
+        Flow[KafkaTransmitted].batch(maxBulkSize, Seq(_))(_ :+ _)
       }
     }
 
-    def processKafkaEvent(event: KafkaEvent): Unit = {
-      bulkProcessor.add(event.toIndexRequest.source(event.toPayload), event.getCommittableOffset)
+    def processKafkaTransmitted(event: KafkaTransmitted): Unit = {
+      bulkProcessor.add(event.toIndexRequest.source(event.event.toPayload), event.committableOffset)
     }
 
-    def sink: Sink[KafkaEvent, NotUsed] = {
+    def sink: Sink[KafkaTransmitted, NotUsed] = {
       val flow = startingFlow.mapConcat(_.to[immutable.Seq])
       if (concurrentRequests < 1) {
-        flow.to(Sink.foreach(processKafkaEvent))
+        flow.to(Sink.foreach(processKafkaTransmitted))
       } else {
-        flow.to(Sink.foreachParallel(concurrentRequests)(processKafkaEvent))
+        flow.to(Sink.foreachParallel(concurrentRequests)(processKafkaTransmitted))
       }
     }
   }

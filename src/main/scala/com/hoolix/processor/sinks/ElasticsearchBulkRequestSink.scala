@@ -1,16 +1,18 @@
 package com.hoolix.processor.sinks
 
+import java.util.concurrent.TimeUnit
+
 import akka.NotUsed
 import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.stream.scaladsl.{Flow, Sink}
 import com.hoolix.processor.flows.ElasticsearchBulkFlow
 import com.hoolix.processor.flows.ElasticsearchBulkFlow.BulkRequestAndOffsets
-import com.hoolix.processor.models.KafkaEvent
+import com.hoolix.processor.models.KafkaTransmitted
 import com.typesafe.config.Config
 import org.elasticsearch.action.ActionListener
 import org.elasticsearch.action.bulk.{BulkItemResponse, BulkRequest, BulkResponse}
 import org.elasticsearch.client.transport.TransportClient
-import org.elasticsearch.common.unit.{ByteSizeUnit, ByteSizeValue}
+import org.elasticsearch.common.unit.{ByteSizeUnit, ByteSizeValue, TimeValue}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
@@ -28,26 +30,33 @@ object ElasticsearchBulkRequestSink {
     val esBulkConfig = config.getConfig("elasticsearch.bulk")
     val maxBulkSizeInBytes = esBulkConfig.getString("max-size-in-bytes")
     val maxBulkActions = esBulkConfig.getInt("max-actions")
+    val bulkTimeout = esBulkConfig.getString("timeout")
 
-    new ElasticsearchBulkRequestSink(elasticsearchClient, maxBulkSizeInBytes, maxBulkActions, concurrentRequests, ec)
+    new ElasticsearchBulkRequestSink(elasticsearchClient, maxBulkSizeInBytes, maxBulkActions, bulkTimeout, concurrentRequests, ec)
   }
 
   class ElasticsearchBulkRequestSink(
                                       elasticsearchClient: TransportClient,
                                       maxBulkSizeInBytes: String,
                                       maxBulkActions: Int,
+                                      bulkTimeoutTimeValue: String,
                                       concurrentRequests: Int,
                                       implicit val ec: ExecutionContext
                                     ) {
 
-    def bulkFlow: Flow[KafkaEvent, Option[BulkRequestAndOffsets], NotUsed] = {
-      Flow[KafkaEvent].via(ElasticsearchBulkFlow(
+    def bulkFlow: Flow[KafkaTransmitted, Option[BulkRequestAndOffsets], NotUsed] = {
+      Flow[KafkaTransmitted].via(ElasticsearchBulkFlow(
         maxBulkActions,
         ByteSizeValue.parseBytesSizeValue(
           maxBulkSizeInBytes,
           new ByteSizeValue(5, ByteSizeUnit.MB),
           "elasticsearch.bulk.max-size-in-bytes"
-        )
+        ),
+        TimeValue.parseTimeValue(
+          bulkTimeoutTimeValue,
+          new TimeValue(60, TimeUnit.SECONDS),
+          "elasticsearch.bulk.timeout"
+        ).getMillis
       ))
     }
 
@@ -118,7 +127,7 @@ object ElasticsearchBulkRequestSink {
       }
     }
 
-    def sink: Sink[KafkaEvent, NotUsed] = {
+    def sink: Sink[KafkaTransmitted, NotUsed] = {
       if (concurrentRequests < 1) {
         val flow = bulkFlow
           .filter(_.isDefined)

@@ -4,6 +4,7 @@
 .mtj.tmp/
 
 # Package Files #
+*.tar*
 *.jar
 *.war
 *.ear
@@ -15,3 +16,4 @@ hs_err_pid*
 .gradle/
 build/
 out/
+dist/

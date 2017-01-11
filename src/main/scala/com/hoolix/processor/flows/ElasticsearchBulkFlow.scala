@@ -3,9 +3,11 @@ package com.hoolix.processor.flows
 import akka.kafka.ConsumerMessage.CommittableOffset
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import com.hoolix.processor.models.KafkaEvent
+import com.hoolix.processor.models.KafkaTransmitted
 import org.elasticsearch.action.bulk.BulkRequest
 import org.elasticsearch.common.unit.ByteSizeValue
+
+import scala.collection.JavaConversions
 
 /**
   * Hoolix 2017
@@ -16,39 +18,49 @@ object ElasticsearchBulkFlow {
 
   def apply(
            bulkActions: Int,
-           bulkSize: ByteSizeValue
-           ): GraphStage[FlowShape[KafkaEvent, Option[BulkRequestAndOffsets]]] = new ElasticsearchBulkFlow(bulkActions, bulkSize)
+           bulkSize: ByteSizeValue,
+           timeoutInMillis: Long
+           ): GraphStage[FlowShape[KafkaTransmitted, Option[BulkRequestAndOffsets]]] =
+    new ElasticsearchBulkFlow(bulkActions, bulkSize, timeoutInMillis)
 
   class ElasticsearchBulkFlow(
                                bulkActions: Int,
-                               bulkSize: ByteSizeValue
-                             ) extends GraphStage[FlowShape[KafkaEvent, Option[BulkRequestAndOffsets]]] {
+                               bulkSize: ByteSizeValue,
+                               timeoutInMillis: Long
+                             ) extends GraphStage[FlowShape[KafkaTransmitted, Option[BulkRequestAndOffsets]]] {
 
-    val in: Inlet[KafkaEvent] = Inlet[KafkaEvent]("EventIn")
+    val in: Inlet[KafkaTransmitted] = Inlet[KafkaTransmitted]("EventIn")
     val out: Outlet[Option[BulkRequestAndOffsets]] = Outlet[Option[BulkRequestAndOffsets]]("BulkRequestOut")
 
     val bulkSizeInBytes: Long = bulkSize.getBytes
 
     var bulkRequest: BulkRequest = new BulkRequest()
     var offsets: Seq[CommittableOffset] = Seq()
+    var bulkTime: Long = 0
 
-    override val shape: FlowShape[KafkaEvent, Option[BulkRequestAndOffsets]] = FlowShape(in, out)
+    override val shape: FlowShape[KafkaTransmitted, Option[BulkRequestAndOffsets]] = FlowShape(in, out)
 
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = {
       new GraphStageLogic(shape) {
-        override def preStart(): Unit = pull(in)
+        override def preStart(): Unit = {
+          bulkTime = System.currentTimeMillis()
+          pull(in)
+        }
 
         setHandler(in, new InHandler {
           override def onPush(): Unit = {
             if (isAvailable(in)) {
               val incomingEvent = grab(in)
-              bulkRequest = bulkRequest.add(incomingEvent.toIndexRequest.source(incomingEvent.toPayload))
-              offsets :+= incomingEvent.getCommittableOffset
+//              println("in bulk flow before conversion")
+              bulkRequest = bulkRequest.add(incomingEvent.toIndexRequest.source(JavaConversions.mutableMapAsJavaMap(incomingEvent.event.toPayload)))
+//              println("in bulk flow after conversion")
+              offsets :+= incomingEvent.committableOffset
             }
 
             if (((bulkRequest.estimatedSizeInBytes() < bulkSizeInBytes) &&
               (bulkRequest.numberOfActions() < bulkActions)) &&
               !hasBeenPulled(in)) {
+              bulkTime = System.currentTimeMillis()
               pull(in)
             }
           }
@@ -75,13 +87,21 @@ object ElasticsearchBulkFlow {
               return
             }
 
+            // if it reached maxSize or maxActions, or the timeout has hit, a push is triggered
             if (((bulkRequest.estimatedSizeInBytes() >= bulkSizeInBytes) ||
-              (bulkRequest.numberOfActions() >= bulkActions)) &&
-              isAvailable(out)) {
+                 (bulkRequest.numberOfActions() >= bulkActions) ||
+                 ((System.currentTimeMillis() - bulkTime >= timeoutInMillis) &&
+                  (bulkRequest.numberOfActions() > 0))) &&
+                isAvailable(out)) {
+
               push(out, Some(bulkRequest, offsets))
               bulkRequest = new BulkRequest()
               offsets = Seq()
-              pull(in)
+              bulkTime = System.currentTimeMillis()
+
+              if (!hasBeenPulled(in)) {
+                pull(in)
+              }
             } else {
               push(out, None)
             }

@@ -2,11 +2,10 @@ package com.hoolix.processor.sources
 
 import akka.actor.ActorSystem
 import akka.kafka.ConsumerMessage.CommittableMessage
+import akka.kafka.Subscriptions
 import akka.kafka.scaladsl.Consumer
-import akka.kafka.{ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.Source
-import com.hoolix.processor.models.builders.KafkaEventBuilder
-import com.hoolix.processor.models.{FilebeatEvent, KafkaEvent}
+import com.hoolix.processor.models.{FileBeatEvent, KafkaTransmitted}
 import com.hoolix.processor.modules.KafkaConsumerSettings
 import com.typesafe.config.Config
 
@@ -18,21 +17,22 @@ import scala.concurrent.Future
   */
 object KafkaSource {
 
-  def convertToKafkaEvent(committableMessage: CommittableMessage[Array[Byte], String]): Future[KafkaEvent] = {
-    val kafkaEvent = new KafkaEventBuilder()
-      .setCommittableOffset(committableMessage.committableOffset)
-      .setEvent(FilebeatEvent.fromJsonString(committableMessage.record.value))
-      .build()
-    Future.successful(kafkaEvent)
+  def convertToEvent(committableMessage: CommittableMessage[Array[Byte], String]): Future[KafkaTransmitted] = {
+    val event = KafkaTransmitted(
+      committableMessage.committableOffset,
+      FileBeatEvent.fromJsonString(committableMessage.record.value)
+    )
+    Future.successful(event)
   }
 
   def apply(
              parallelism: Int,
-             kafkaTopics: Set[String]
-           )(implicit config: Config, system: ActorSystem): Source[KafkaEvent, Consumer.Control] = {
+             kafkaTopic: String
+           )(implicit config: Config, system: ActorSystem): Source[KafkaTransmitted, Consumer.Control] = {
 
-    Consumer.committableSource(KafkaConsumerSettings(), Subscriptions.topics(kafkaTopics))
-      .mapAsync(parallelism)(KafkaSource.convertToKafkaEvent)
+    //FIXME: rolling back to single topic per stream for now, need more fine-grained control
+    Consumer.committableSource(KafkaConsumerSettings(), Subscriptions.topics(Set(kafkaTopic)))
+      .mapAsync(parallelism)(KafkaSource.convertToEvent)
 
   }
 }
