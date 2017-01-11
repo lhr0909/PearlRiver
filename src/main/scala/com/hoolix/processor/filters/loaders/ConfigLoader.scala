@@ -4,13 +4,13 @@ package com.hoolix.processor.filters.loaders
 //import com.hoolix.processor.configuration.Config
 //import com.hoolix.processor.filters.Filter
 //import com.hoolix.processor.models.PipelineDBConfig
-import com.hoolix.processor.utils.{Converter}
+import com.hoolix.processor.utils.Converter
 import java.util.regex.Pattern
 
-import com.avaje.ebean.{Ebean, RawSqlBuilder}
 import com.hoolix.processor.filters._
-import com.hoolix.processor.models.{Event}
-import com.hoolix.processor.utils.{Converter}
+import com.hoolix.processor.flows.FilterFlow.FilterMatchingRule
+import com.hoolix.processor.models.Event
+import com.hoolix.processor.utils.Converter
 import org.apache.commons.lang3.StringEscapeUtils
 
 /**
@@ -52,15 +52,12 @@ case class RawConfigEntry(token  : String,
                           version: Long   = 0
                          )
 
-
 object ConfigLoader  {
 
-
-  def build_from_local(filename: String): Map[String, Map[String, Seq[(Seq[(Event) => Boolean], Filter)]]] = {
-        val configs = load_from_yaml(filename)
-        build_filter(configs)
+  def build_from_local(filename: String): Map[String, Map[String, Seq[FilterMatchingRule]]] = {
+    val configs = load_from_yaml(filename)
+    build_filter(configs)
   }
-
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -111,13 +108,14 @@ object ConfigLoader  {
       logger.warn("no type found")
     }
 
+    //TODO: move this to use Try()
     try {
       ConfigEntryBuilder.build_from_raw(typ, raw_config)
     }catch {
-      case e:ConfigEntryCheckFailException =>
+      case e: ConfigEntryCheckFailException =>
         throw e
 
-      case e =>
+      case e: Exception =>
         e.printStackTrace()
         throw new ConfigEntryCheckFailException(typ, raw_config.name, "parse error")
     }
@@ -211,7 +209,7 @@ object ConfigLoader  {
     val filter = entry match {
       case entry:PatternConfigEntry   => PatternParser(cfg.target._2, entry.matches, entry.patterns, "conf/patterns") // TODO
       case entry:GeoConfigEntry       => GeoParser(cfg.target._2, "conf/GeoLite2-City.mmdb") //TODO
-      case entry:TimestampConfigEntry => DateFilter(cfg.target._2, entry.from_formats, entry.to_format)
+      case entry:TimestampConfigEntry => DateFilter(cfg.target._2, entry.from_formats)
       case entry:KVConfigEntry        => KVFilter(cfg.target._2, entry.delimiter, entry.sub_delimiter)
       case entry:SplitConfigEntry     => SplitFilter(cfg.target._2, entry.delimiter, entry.max_split, entry.names)
 //      case entry:MutateConfigEntry    => MutateFilter(cfg.target._2, entry.cmds)
@@ -228,7 +226,7 @@ object ConfigLoader  {
     filter
   }
 
-  def build_filter(pipe : ConfigPipeline): Map[String, Map[String, Seq[(Seq[(Event) => Boolean], Filter)]]] = {
+  def build_filter(pipe : ConfigPipeline): Map[String, Map[String, Seq[FilterMatchingRule]]] = {
 
     val filter_map =
       pipe.config.map { case (token, type_entrys) => token -> {

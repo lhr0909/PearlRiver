@@ -3,31 +3,37 @@ package com.hoolix.processor.filters
 
 import com.hoolix.processor.models.{Event, IntermediateEvent}
 
+import scala.collection.JavaConversions
+
 case class KVFilter(targetField: String, delimiter: String="\\s+", subDelimiter: String="=") extends Filter {
 
   override def handle(event: Event): Event = {
     val payload = event.toPayload
-    println("in kv filter")
-    if (subDelimiter != "") {
-      println("in kv filter")
-      if (payload.contains(targetField)) {
-        val field_value = payload.get(targetField).asInstanceOf[Some[String]].get
-        if (field_value != null && field_value != "") {
-          val words = field_value.split(delimiter)
 
+    if (payload.contains(targetField)) {
+
+      val field_value = payload.get(targetField).asInstanceOf[Some[String]].get
+      if (field_value != null && field_value != "") {
+
+        val words = field_value.split(delimiter)
+        if (subDelimiter != "") {
+          val kvs = collection.mutable.Map[String, String]()
           words.foreach { word => {
-            val kvs = word.split(subDelimiter, 2)
-            kvs.size match {
+            val kv = word.split(subDelimiter, 2)
+            kv.size match {
               case 0 => None
               case 1 => None
-              case 2 => payload.put(kvs(0), kvs(1)) // TODO prefix or nest
+              case 2 => kvs.put(kv(0), kv(1)) // TODO prefix or nest
             }
           }}
+          if (kvs.nonEmpty) {
+            payload.put(targetField + "_map", JavaConversions.mutableMapAsJavaMap(kvs))
+          }
+
         }
+
       }
     }
-    println("in kv filter")
-    println(payload)
     IntermediateEvent(payload)
   }
 

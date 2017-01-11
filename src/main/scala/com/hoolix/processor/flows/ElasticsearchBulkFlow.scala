@@ -18,12 +18,15 @@ object ElasticsearchBulkFlow {
 
   def apply(
            bulkActions: Int,
-           bulkSize: ByteSizeValue
-           ): GraphStage[FlowShape[KafkaTransmitted, Option[BulkRequestAndOffsets]]] = new ElasticsearchBulkFlow(bulkActions, bulkSize)
+           bulkSize: ByteSizeValue,
+           timeoutInMillis: Long
+           ): GraphStage[FlowShape[KafkaTransmitted, Option[BulkRequestAndOffsets]]] =
+    new ElasticsearchBulkFlow(bulkActions, bulkSize, timeoutInMillis)
 
   class ElasticsearchBulkFlow(
                                bulkActions: Int,
-                               bulkSize: ByteSizeValue
+                               bulkSize: ByteSizeValue,
+                               timeoutInMillis: Long
                              ) extends GraphStage[FlowShape[KafkaTransmitted, Option[BulkRequestAndOffsets]]] {
 
     val in: Inlet[KafkaTransmitted] = Inlet[KafkaTransmitted]("EventIn")
@@ -33,26 +36,31 @@ object ElasticsearchBulkFlow {
 
     var bulkRequest: BulkRequest = new BulkRequest()
     var offsets: Seq[CommittableOffset] = Seq()
+    var bulkTime: Long = 0
 
     override val shape: FlowShape[KafkaTransmitted, Option[BulkRequestAndOffsets]] = FlowShape(in, out)
 
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = {
       new GraphStageLogic(shape) {
-        override def preStart(): Unit = pull(in)
+        override def preStart(): Unit = {
+          bulkTime = System.currentTimeMillis()
+          pull(in)
+        }
 
         setHandler(in, new InHandler {
           override def onPush(): Unit = {
             if (isAvailable(in)) {
               val incomingEvent = grab(in)
-              println("in bulk flow before conversion")
+//              println("in bulk flow before conversion")
               bulkRequest = bulkRequest.add(incomingEvent.toIndexRequest.source(JavaConversions.mutableMapAsJavaMap(incomingEvent.event.toPayload)))
-              println("in bulk flow after conversion")
+//              println("in bulk flow after conversion")
               offsets :+= incomingEvent.committableOffset
             }
 
             if (((bulkRequest.estimatedSizeInBytes() < bulkSizeInBytes) &&
               (bulkRequest.numberOfActions() < bulkActions)) &&
               !hasBeenPulled(in)) {
+              bulkTime = System.currentTimeMillis()
               pull(in)
             }
           }
@@ -79,13 +87,21 @@ object ElasticsearchBulkFlow {
               return
             }
 
+            // if it reached maxSize or maxActions, or the timeout has hit, a push is triggered
             if (((bulkRequest.estimatedSizeInBytes() >= bulkSizeInBytes) ||
-              (bulkRequest.numberOfActions() >= bulkActions)) &&
-              isAvailable(out)) {
+                 (bulkRequest.numberOfActions() >= bulkActions) ||
+                 ((System.currentTimeMillis() - bulkTime >= timeoutInMillis) &&
+                  (bulkRequest.numberOfActions() > 0))) &&
+                isAvailable(out)) {
+
               push(out, Some(bulkRequest, offsets))
               bulkRequest = new BulkRequest()
               offsets = Seq()
-              pull(in)
+              bulkTime = System.currentTimeMillis()
+
+              if (!hasBeenPulled(in)) {
+                pull(in)
+              }
             } else {
               push(out, None)
             }

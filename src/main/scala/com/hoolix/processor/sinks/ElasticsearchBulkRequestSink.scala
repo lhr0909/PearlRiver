@@ -1,5 +1,7 @@
 package com.hoolix.processor.sinks
 
+import java.util.concurrent.TimeUnit
+
 import akka.NotUsed
 import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.stream.scaladsl.{Flow, Sink}
@@ -10,7 +12,7 @@ import com.typesafe.config.Config
 import org.elasticsearch.action.ActionListener
 import org.elasticsearch.action.bulk.{BulkItemResponse, BulkRequest, BulkResponse}
 import org.elasticsearch.client.transport.TransportClient
-import org.elasticsearch.common.unit.{ByteSizeUnit, ByteSizeValue}
+import org.elasticsearch.common.unit.{ByteSizeUnit, ByteSizeValue, TimeValue}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
@@ -28,14 +30,16 @@ object ElasticsearchBulkRequestSink {
     val esBulkConfig = config.getConfig("elasticsearch.bulk")
     val maxBulkSizeInBytes = esBulkConfig.getString("max-size-in-bytes")
     val maxBulkActions = esBulkConfig.getInt("max-actions")
+    val bulkTimeout = esBulkConfig.getString("timeout")
 
-    new ElasticsearchBulkRequestSink(elasticsearchClient, maxBulkSizeInBytes, maxBulkActions, concurrentRequests, ec)
+    new ElasticsearchBulkRequestSink(elasticsearchClient, maxBulkSizeInBytes, maxBulkActions, bulkTimeout, concurrentRequests, ec)
   }
 
   class ElasticsearchBulkRequestSink(
                                       elasticsearchClient: TransportClient,
                                       maxBulkSizeInBytes: String,
                                       maxBulkActions: Int,
+                                      bulkTimeoutTimeValue: String,
                                       concurrentRequests: Int,
                                       implicit val ec: ExecutionContext
                                     ) {
@@ -47,7 +51,12 @@ object ElasticsearchBulkRequestSink {
           maxBulkSizeInBytes,
           new ByteSizeValue(5, ByteSizeUnit.MB),
           "elasticsearch.bulk.max-size-in-bytes"
-        )
+        ),
+        TimeValue.parseTimeValue(
+          bulkTimeoutTimeValue,
+          new TimeValue(60, TimeUnit.SECONDS),
+          "elasticsearch.bulk.timeout"
+        ).getMillis
       ))
     }
 

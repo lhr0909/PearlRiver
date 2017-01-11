@@ -11,7 +11,11 @@
 - type: timestamp
   target: timestamp
   token: "*"
-#  types: ["apache_access"]
+  #  types: ["apache_access"]
+  args:
+    from_format:
+      - ["dd/MMM/yyyy:HH:mm:ss Z", "en", "Asia/Shanghai"]
+
 
 - type: user-agent
   target: agent

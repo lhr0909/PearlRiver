@@ -18,26 +18,20 @@ import scala.concurrent.Future
 object KafkaSource {
 
   def convertToEvent(committableMessage: CommittableMessage[Array[Byte], String]): Future[KafkaTransmitted] = {
-//    val Event = new EventBuilder()
-//      .setCommittableOffset(committableMessage.committableOffset)
-//      .setEvent(FileBeatEvent.fromJsonString(committableMessage.record.value))
-//      .build()
-//    Event()
-    println(committableMessage)
-    val event = KafkaTransmitted(committableMessage.committableOffset, FileBeatEvent.fromJsonString(committableMessage.record.value))
-    println(event)
-//    val event = KafkaTransmitted(committableMessage.committableOffset, LineEvent(committableMessage.record.value))
-
-    //    val event = new FileBeatEvent(committableMessage.committableOffset, committableMessage.record.value)
+    val event = KafkaTransmitted(
+      committableMessage.committableOffset,
+      FileBeatEvent.fromJsonString(committableMessage.record.value)
+    )
     Future.successful(event)
   }
 
   def apply(
              parallelism: Int,
-             kafkaTopics: Set[String]
+             kafkaTopic: String
            )(implicit config: Config, system: ActorSystem): Source[KafkaTransmitted, Consumer.Control] = {
 
-    Consumer.committableSource(KafkaConsumerSettings(), Subscriptions.topics(kafkaTopics))
+    //FIXME: rolling back to single topic per stream for now, need more fine-grained control
+    Consumer.committableSource(KafkaConsumerSettings(), Subscriptions.topics(Set(kafkaTopic)))
       .mapAsync(parallelism)(KafkaSource.convertToEvent)
 
   }

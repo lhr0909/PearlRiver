@@ -296,10 +296,10 @@ case class GeoConfigEntry() extends ConfigEntry {}
 case class TimestampConfigEntry() extends ConfigEntry {
   //timeformat, timezoke, locale
 
-  val to_format_default : (String,String,String) = ("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "UTC", "en")
+//  val to_format_default : (String,String,String) = ("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "UTC", "en")
 
   var from_formats = Seq[(String,String,String)]()
-  var to_format : (String,String,String) = to_format_default
+//  var to_format : (String,String,String) = to_format_default
 
 
   override val args_usage: String =
@@ -337,13 +337,13 @@ case class TimestampConfigEntry() extends ConfigEntry {
     from_formats = node.getOrElse("from_format", Seq()).safe_cast[Seq[Seq[String]]]("arguments.from_format")
       .flatMap(seq_to_triple(_))
 
-    to_format = seq_to_triple({
-      node.get("to_format").safe_cast[Option[Seq[Seq[String]]]]("arguments.to_format") match {
-        case None        => Seq("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "UTC", "en")
-        case Some(Seq()) => Seq("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "UTC", "en")
-        case Some(seq: Seq[String]) => seq(0)
-      }
-    }).getOrElse(to_format_default)
+//    to_format = seq_to_triple({
+//      node.get("to_format").safe_cast[Option[Seq[Seq[String]]]]("arguments.to_format") match {
+//        case None        => Seq("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "UTC", "en")
+//        case Some(Seq()) => Seq("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "UTC", "en")
+//        case Some(seq: Seq[String]) => seq(0)
+//      }
+//    }).getOrElse(to_format_default)
 
     None
   }
@@ -351,7 +351,7 @@ case class TimestampConfigEntry() extends ConfigEntry {
   override def check_args: Unit = {
     from_formats.foreach { case (format, timezone, lang) =>
       try {
-        DateFilter.compile_formatter(format, timezone, lang)
+        DateFilter.dateTimeFormatter(format, timezone, lang)
       } catch {
         case e =>
           throw new ConfigCheckFailException(s"compile timestamp [$name] failed: $format $timezone $lang")
@@ -359,7 +359,8 @@ case class TimestampConfigEntry() extends ConfigEntry {
     }
   }
 
-  override def toString() : String = {super.toString + ",from:%s,to:%s".format(to_format, to_format)}
+//  override def toString() : String = {super.toString + ",from:%s,to:%s".format(to_format, to_format)}
+  override def toString() : String = {super.toString + ",from:%s".format(from_formats)}
 }
 
 case class MutateConfigEntry() extends ConfigEntry {
