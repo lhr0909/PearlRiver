@@ -22,7 +22,6 @@ object FilterFlow {
            ): Flow[KafkaTransmitted, KafkaTransmitted, NotUsed] = {
 
     Flow[KafkaTransmitted].mapAsync(parallelism) { incomingEvent: KafkaTransmitted =>
-      println("enter filter flow???")
       var filtered: Event = incomingEvent.event
       val payload = filtered.toPayload
       //      filters.getOrElse(payload("token").asInstanceOf[String], filters("*"))
@@ -46,7 +45,6 @@ object FilterFlow {
           }
           if (required) filtered = elem._2.handle(filtered)
         }
-        println("finish filter flow???")
         Future.successful(KafkaTransmitted(incomingEvent.committableOffset, filtered))
       }
     }

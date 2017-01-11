@@ -3,6 +3,7 @@ package com.hoolix.processor.flows
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.hoolix.processor.models.KafkaTransmitted
+import org.elasticsearch.ResourceAlreadyExistsException
 import org.elasticsearch.action.ActionListener
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse
@@ -52,11 +53,6 @@ object CreateIndexFlow {
               event: KafkaTransmitted
             )(implicit ec: ExecutionContext): Future[CreateIndexResponse] = {
 
-    val settings: Settings.Builder = Settings.builder()
-      .put("index.refresh_interval", "5s")
-      .put("index.number_of_shards", "3")
-      .put("index.number_of_replicas", "1")
-      .put("index.requests.cache.enable", "true")
     val mapping = Source.fromFile("conf/mapping/" + event.indexType + ".mapping.json").mkString
     val promise = Promise[CreateIndexResponse]()
     val listener = new ActionListener[CreateIndexResponse] {
@@ -64,7 +60,7 @@ object CreateIndexFlow {
       override def onFailure(e: Exception) = promise.failure(e)
     }
     esClient.admin().indices().prepareCreate(event.indexName)
-      .setSettings(settings)
+      .setSettings(indexSettings)
       .addMapping(event.indexType, mapping)
       .execute(listener)
 
@@ -87,14 +83,20 @@ object CreateIndexFlow {
               createdIndexCache.put(event.indexName, true)
               p.success(event)
             } else {
+              println(s"index ${ event.indexName } does not exist, creating it")
               create(esClient, indexSettings, event) onComplete {
                 case Success(_) =>
                   createdIndexCache.put(event.indexName, true)
                   p.success(event)
-                case Failure(e) => e.printStackTrace()
+                case Failure(e: ResourceAlreadyExistsException) =>
+                  println(e.getMessage)
+                  p.success(event)
+                case Failure(otherException) => otherException.printStackTrace()
               }
             }
-          case Failure(e) => e.printStackTrace()
+
+          case Failure(existCallException) =>
+            existCallException.printStackTrace()
         }
       }
 
