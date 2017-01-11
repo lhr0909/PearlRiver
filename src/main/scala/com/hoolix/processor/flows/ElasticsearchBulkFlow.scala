@@ -87,15 +87,21 @@ object ElasticsearchBulkFlow {
               return
             }
 
+            // if it reached maxSize or maxActions, or the timeout has hit, a push is triggered
             if (((bulkRequest.estimatedSizeInBytes() >= bulkSizeInBytes) ||
                  (bulkRequest.numberOfActions() >= bulkActions) ||
-                 (System.currentTimeMillis() - bulkTime >= timeoutInMillis)) &&
+                 ((System.currentTimeMillis() - bulkTime >= timeoutInMillis) &&
+                  (bulkRequest.numberOfActions() > 0))) &&
                 isAvailable(out)) {
+
               push(out, Some(bulkRequest, offsets))
               bulkRequest = new BulkRequest()
               offsets = Seq()
               bulkTime = System.currentTimeMillis()
-              pull(in)
+
+              if (!hasBeenPulled(in)) {
+                pull(in)
+              }
             } else {
               push(out, None)
             }
