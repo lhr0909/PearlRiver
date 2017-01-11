@@ -34,10 +34,16 @@ object KafkaToEsStream {
            )(implicit config: Config, system: ActorSystem, ec: ExecutionContext): KafkaToEsStream =
     new KafkaToEsStream(parallelism, esClient, kafkaTopic, config, system, ec)
 
+  //TODO: add a callback when it is done
   def stopStream(kafkaTopic: String)(implicit ec: ExecutionContext): Unit = {
     //FIXME: we are only stopping here, will need to shutdown the whole stream when it is completely done
-    streamCache(kafkaTopic).stop() onSuccess {
-      case Done => streamCache.remove(kafkaTopic)
+    streamCache(kafkaTopic).stop()
+  }
+
+  def shutdownStream(kafkaTopic: String)(implicit ec: ExecutionContext): Unit = {
+    streamCache(kafkaTopic).shutdown() onSuccess {
+      case Done =>
+        streamCache.remove(kafkaTopic)
     }
   }
 

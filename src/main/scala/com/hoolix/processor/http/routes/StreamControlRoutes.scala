@@ -2,6 +2,7 @@ package com.hoolix.processor.http.routes
 
 import java.time.Instant
 
+import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
@@ -28,8 +29,13 @@ object StreamControlRoutes {
       complete(s"pipeline $kafkaTopic started")
     } ~
     pathPrefix("stop" / Remaining) { kafkaTopic =>
-      println(s"Shutting down Kafka Source now... - " + Instant.now)
+      println(s"Stopping Kafka Source now... - " + Instant.now)
       KafkaToEsStream.stopStream(kafkaTopic)
+      complete(s"pipeline $kafkaTopic stopped")
+    } ~
+    pathPrefix("shutdown" / Remaining) { kafkaTopic =>
+      println(s"Shutting down Kafka Source now... - " + Instant.now)
+      KafkaToEsStream.shutdownStream(kafkaTopic)
       complete(s"pipeline $kafkaTopic stopped")
     }
   }

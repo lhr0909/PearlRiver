@@ -86,6 +86,7 @@ object CreateIndexFlow {
               println(s"index ${ event.indexName } does not exist, creating it")
               create(esClient, indexSettings, event) onComplete {
                 case Success(_) =>
+                  println(s"successfully created index ${ event.indexName }")
                   createdIndexCache.put(event.indexName, true)
                   p.success(event)
                 case Failure(e: ResourceAlreadyExistsException) =>
