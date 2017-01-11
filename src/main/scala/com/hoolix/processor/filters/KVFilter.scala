@@ -10,13 +10,11 @@ case class KVFilter(targetField: String, delimiter: String="\\s+", subDelimiter:
   override def handle(event: Event): Event = {
     val payload = event.toPayload
 
-
     if (payload.contains(targetField)) {
 
       val field_value = payload.get(targetField).asInstanceOf[Some[String]].get
       if (field_value != null && field_value != "") {
 
-        println(payload)
         val words = field_value.split(delimiter)
         if (subDelimiter != "") {
           val kvs = collection.mutable.Map[String, String]()
@@ -25,10 +23,10 @@ case class KVFilter(targetField: String, delimiter: String="\\s+", subDelimiter:
             kv.size match {
               case 0 => None
               case 1 => None
-              case 2 => kvs.put(kv(0), kv(1)); println(kvs) // TODO prefix or nest
+              case 2 => kvs.put(kv(0), kv(1)) // TODO prefix or nest
             }
           }}
-          if (kvs.size != 0) {
+          if (kvs.nonEmpty) {
             payload.put(targetField + "_map", JavaConversions.mutableMapAsJavaMap(kvs))
           }
 
@@ -36,10 +34,6 @@ case class KVFilter(targetField: String, delimiter: String="\\s+", subDelimiter:
 
       }
     }
-    println(payload)
-
-    println("in kv filter")
-    println(payload)
     IntermediateEvent(payload)
   }
 

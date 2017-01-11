@@ -6,16 +6,9 @@ import com.hoolix.processor.models.{Event, IntermediateEvent}
 import eu.bitwalker.useragentutils.UserAgent
 
 case class HttpAgentFilter(targetField: String) extends Filter{
-  /**
-    * @param ctx
-    * @return
-    * true  parse success
-    * false parse fail
-    * None  nothing to do
-    */
+
   override def handle(event: Event): Event = {
     val payload = event.toPayload
-
 
     val agent_str = Some(payload.get(targetField).asInstanceOf[Some[String]].get) match {
       case Some("")  => ""
@@ -24,24 +17,14 @@ case class HttpAgentFilter(targetField: String) extends Filter{
       case Some(s)   => s
     }
 
-//    if (agent_str == "" || agent_str == "-")
-//      return Left(null)
-
     val (browser, os) = parse(agent_str)
 
-//    Right(
-//      Seq(
-//        ("agent_browser", browser),
-//        ("agent_os", os)
-//      )
-//    )
     payload.put("agent_browser", browser)
     payload.put("agent_os", os)
-    println("in agent filter")
-//    println(payload)
     IntermediateEvent(payload)
   }
 
+  //FIXME: move this to config file
   def browser_tag = Seq(
     ("Maxthon"  -> "MAXTHON"), //遨游
     ("The world" -> "The world"), //世界之窗
@@ -109,19 +92,20 @@ case class HttpAgentFilter(targetField: String) extends Filter{
 
     var browser_name = ""
     //国产浏览器
-    browser_tag.find { case (tag,name) =>
-       (agent_string.contains(tag)) match {
-         case true  => browser_name = name; true
-         case false => false
-       }
+    browser_tag.find { case (tag, name) =>
+      if (agent_string.contains(tag)) {
+        browser_name = name
+        true
+      } else {
+        false
+      }
     }
 
     val (browser, os) = {
       val agent = UserAgent.parseUserAgentString(agent_string)
       if (agent == "UNKNOWN") {
         ("", "")
-      }
-      else {
+      } else {
         agent.getBrowser.toString match {
           case "Unknown" => ("", agent.getOperatingSystem.toString)
           case "UNKNOWN" => ("", agent.getOperatingSystem.toString)
@@ -134,8 +118,9 @@ case class HttpAgentFilter(targetField: String) extends Filter{
     if (browser_name == "") {
       browser_name = browser
 
-      if (browser_name == "Bot")
+      if (browser_name == "Bot") {
         browser_name = parse_bot(agent_string).getOrElse("")
+      }
     }
 
     if (browser_name == "" || Seq("Unknown", "UNKNOWN").contains(browser_name)) {
@@ -143,9 +128,9 @@ case class HttpAgentFilter(targetField: String) extends Filter{
     }
 
     if (browser_name == "") {
-      return ("UNKNOWN", os)
+      ("UNKNOWN", os)
     } else {
-      return (browser_name.capitalize, os)
+      (browser_name.capitalize, os)
     }
   }
 

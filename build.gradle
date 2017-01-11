@@ -55,6 +55,7 @@ dependencies {
 
     // ES相关依赖
     compile 'org.elasticsearch.client:transport:5.1.1'
+    compile 'io.thekraken:grok:0.1.5'
 
     // 其他Utils依赖
     compile 'org.apache.commons:commons-lang3:3.5'

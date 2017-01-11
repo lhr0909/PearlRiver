@@ -35,6 +35,7 @@ object KafkaToEsStream {
     new KafkaToEsStream(parallelism, esClient, kafkaTopic, config, system, ec)
 
   def stopStream(kafkaTopic: String)(implicit ec: ExecutionContext): Unit = {
+    //FIXME: we are only stopping here, will need to shutdown the whole stream when it is completely done
     streamCache(kafkaTopic).stop() onSuccess {
       case Done => streamCache.remove(kafkaTopic)
     }
