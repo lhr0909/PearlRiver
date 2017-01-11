@@ -9,6 +9,7 @@ import org.elasticsearch.action.admin.indices.create.CreateIndexResponse
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse
 import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.common.settings.Settings
+import org.elasticsearch.transport.RemoteTransportException
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -89,9 +90,20 @@ object CreateIndexFlow {
                   println(s"successfully created index ${ event.indexName }")
                   createdIndexCache.put(event.indexName, true)
                   p.success(event)
-                case Failure(e: ResourceAlreadyExistsException) =>
-                  println(e.getMessage)
-                  p.success(event)
+
+                case Failure(e: RemoteTransportException) =>
+                  println("finding out root cause")
+                  var e1: Throwable = e
+                  while (e1.isInstanceOf[RemoteTransportException]) {
+                    e1 = e1.getCause
+                  }
+                  e1 match {
+                    case e: ResourceAlreadyExistsException =>
+                      println(e.getMessage)
+                      p.success(event)
+                    case others => others.printStackTrace()
+                  }
+
                 case Failure(otherException) => otherException.printStackTrace()
               }
             }
