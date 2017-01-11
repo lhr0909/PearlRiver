@@ -19,9 +19,9 @@ import scala.concurrent.ExecutionContext
   */
 object StreamControlRoutes {
   def apply(esClient: TransportClient)(implicit config: Config, system: ActorSystem, ec: ExecutionContext, mat: Materializer): Route = {
-    pathPrefix("start" / Remaining) { kafkaTopic =>
+    pathPrefix("start"/ IntNumber / Remaining) { (parallelism, kafkaTopic) =>
       val stream = KafkaToEsStream(
-        parallelism = 20,
+        parallelism,
         esClient,
         kafkaTopic
       )
@@ -36,7 +36,7 @@ object StreamControlRoutes {
     pathPrefix("shutdown" / Remaining) { kafkaTopic =>
       println(s"Shutting down Kafka Source now... - " + Instant.now)
       KafkaToEsStream.shutdownStream(kafkaTopic)
-      complete(s"pipeline $kafkaTopic stopped")
+      complete(s"pipeline $kafkaTopic shutdown")
     }
   }
 }
