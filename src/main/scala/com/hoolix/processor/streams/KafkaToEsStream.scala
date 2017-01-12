@@ -56,9 +56,11 @@ object KafkaToEsStream {
                          implicit val ec: ExecutionContext
                        ) {
 
+    val futureExecutionContext: ExecutionContext = system.dispatchers.lookup("future-dispatcher")
+
     val kafkaSource = KafkaSource(parallelism, kafkaTopic)
 //    val esSink = ElasticsearchBulkProcessorSink(esClient, parallelism)
-    val esSink = ElasticsearchBulkRequestSink(esClient, parallelism)
+    val esSink = ElasticsearchBulkRequestSink(esClient, parallelism)(config, futureExecutionContext)
 
     def stream: RunnableGraph[Control] = {
 
@@ -86,15 +88,16 @@ object KafkaToEsStream {
       println(filtersMap)
 
       val filterFlow = FilterFlow(parallelism, filtersMap)
+      val createIndexFlow = CreateIndexFlow(
+          parallelism,
+          esClient,
+          ElasticsearchClient.esIndexCreationSettings()
+        )(futureExecutionContext)
 
       kafkaSource
         .viaMat(decodeFlow)(Keep.left)
         .viaMat(filterFlow)(Keep.left)
-        .viaMat(CreateIndexFlow(
-          parallelism,
-          esClient,
-          ElasticsearchClient.esIndexCreationSettings()
-        ))(Keep.left)
+        .viaMat(createIndexFlow)(Keep.left)
         .toMat(esSink.sink)(Keep.left)
     }
 
