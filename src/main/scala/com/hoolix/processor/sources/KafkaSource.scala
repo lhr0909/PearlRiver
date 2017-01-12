@@ -32,7 +32,7 @@ object KafkaSource {
 
     //FIXME: rolling back to single topic per stream for now, need more fine-grained control
     Consumer.committableSource(KafkaConsumerSettings(), Subscriptions.topics(Set(kafkaTopic)))
-      .mapAsync(parallelism)(KafkaSource.convertToEvent)
+      .mapAsync(parallelism)(KafkaSource.convertToEvent).named("kafka-source")
 
   }
 }

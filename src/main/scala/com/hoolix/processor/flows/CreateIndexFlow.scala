@@ -114,6 +114,6 @@ object CreateIndexFlow {
       }
 
       p.future
-    }
+    }.named("create-index-flow")
   }
 }

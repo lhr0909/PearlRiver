@@ -98,7 +98,7 @@ object ElasticsearchBulkRequestSink {
       bulkRequestPromise.future
     }
 
-    def processKafkaEvent(bulkResponseAndOffsets: Option[BulkResponseAndOffsets]): Unit = {
+    def processBulkResponse(bulkResponseAndOffsets: Option[BulkResponseAndOffsets]): Unit = {
       bulkResponseAndOffsets match {
         case Some(b: BulkResponseAndOffsets) =>
           val (bulkResponse: BulkResponse, offsets: Seq[CommittableOffset]) = b
@@ -134,14 +134,14 @@ object ElasticsearchBulkRequestSink {
           .mapAsync[Option[BulkResponseAndOffsets]](1)(makeBulkRequest)
           .filter(_.isDefined)
 
-        flow.to(Sink.foreach(processKafkaEvent))
+        flow.to(Sink.foreach(processBulkResponse)).named("es-bulk-request-sink-single")
       } else {
         val flow = bulkFlow
           .filter(_.isDefined)
           .mapAsync[Option[BulkResponseAndOffsets]](concurrentRequests)(makeBulkRequest)
           .filter(_.isDefined)
 
-        flow.to(Sink.foreachParallel(concurrentRequests)(processKafkaEvent))
+        flow.to(Sink.foreachParallel(concurrentRequests)(processBulkResponse)).named("es-bulk-request-sink-parallel")
       }
     }
   }

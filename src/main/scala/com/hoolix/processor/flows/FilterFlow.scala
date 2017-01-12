@@ -47,7 +47,7 @@ object FilterFlow {
         }
         Future.successful(KafkaTransmitted(incomingEvent.committableOffset, filtered))
       }
-    }
+    }.named("filter-flow")
 
   }
 }

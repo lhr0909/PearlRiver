@@ -9,7 +9,7 @@ import com.hoolix.processor.decoders.FileBeatDecoder
 import com.hoolix.processor.filters.loaders.ConfigLoader
 import com.hoolix.processor.flows.{CreateIndexFlow, DecodeFlow, FilterFlow}
 import com.hoolix.processor.modules.ElasticsearchClient
-import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
+import com.hoolix.processor.sinks.{ElasticsearchBulkProcessorSink, ElasticsearchBulkRequestSink}
 import com.hoolix.processor.sources.KafkaSource
 import com.typesafe.config.Config
 import org.elasticsearch.client.transport.TransportClient
@@ -59,8 +59,11 @@ object KafkaToEsStream {
     val futureExecutionContext: ExecutionContext = system.dispatchers.lookup("future-dispatcher")
 
     val kafkaSource = KafkaSource(parallelism, kafkaTopic)
-//    val esSink = ElasticsearchBulkProcessorSink(esClient, parallelism)
-    val esSink = ElasticsearchBulkRequestSink(esClient, parallelism)(config, futureExecutionContext)
+
+    val esBulkProcessorSink = ElasticsearchBulkProcessorSink(esClient, parallelism)(config, futureExecutionContext)
+    val esBulkRequestSink = ElasticsearchBulkRequestSink(esClient, parallelism)(config, futureExecutionContext)
+    val esSink = esBulkRequestSink
+//    val esSink = esBlulkProcessorSink
 
     def stream: RunnableGraph[Control] = {
 

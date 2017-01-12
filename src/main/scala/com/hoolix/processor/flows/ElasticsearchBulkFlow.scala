@@ -51,9 +51,13 @@ object ElasticsearchBulkFlow {
           override def onPush(): Unit = {
             if (isAvailable(in)) {
               val incomingEvent = grab(in)
-//              println("in bulk flow before conversion")
-              bulkRequest = bulkRequest.add(incomingEvent.toIndexRequest.source(JavaConversions.mutableMapAsJavaMap(incomingEvent.event.toPayload)))
-//              println("in bulk flow after conversion")
+
+              bulkRequest = bulkRequest.add(
+                incomingEvent.toIndexRequest.source(
+                  JavaConversions.mutableMapAsJavaMap(incomingEvent.event.toPayload)
+                )
+              )
+
               offsets :+= incomingEvent.committableOffset
             }
 

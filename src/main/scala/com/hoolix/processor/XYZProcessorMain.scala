@@ -11,6 +11,7 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.hoolix.processor.http.routes.{OfflineQueryRoutes, StreamControlRoutes}
 import com.hoolix.processor.modules.ElasticsearchClient
 import com.typesafe.config.ConfigFactory
+import kamon.Kamon
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
@@ -27,6 +28,8 @@ object XYZProcessorMain extends App {
   override def main(args: Array[String]): Unit = {
     implicit val config = ConfigFactory.parseFile(new File("conf/application.conf"))
 
+    Kamon.start(config.withFallback(ConfigFactory.defaultReference()))
+
     val decider: Supervision.Decider = { e =>
       logger.error("Unhandled exception in stream", e)
       e.printStackTrace()
@@ -35,7 +38,7 @@ object XYZProcessorMain extends App {
 
     implicit val system = ActorSystem("xyz-processor", config)
     val materializerSettings = ActorMaterializerSettings(system).withSupervisionStrategy(decider)
-    implicit val materializer = ActorMaterializer(materializerSettings)(system)
+    implicit val materializer = ActorMaterializer(materializerSettings, namePrefix = "xyz-streams")(system)
 
     implicit val executionContext = system.dispatchers.lookup("xyz-dispatcher")
 
@@ -64,6 +67,7 @@ object XYZProcessorMain extends App {
         .onComplete { _ =>
           println(s"Waiting for Akka Actor System to shut down in $terminateSeconds seconds... - " + Instant.now)
           println(s"Shutting down Akka Actor System now - " + Instant.now)
+          Kamon.shutdown()
           system.terminate()
           Await.result(system.whenTerminated, terminateSeconds.seconds)
           println("Terminated safely. Cheers - " + Instant.now)

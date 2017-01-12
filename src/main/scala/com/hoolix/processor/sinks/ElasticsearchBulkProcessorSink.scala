@@ -1,5 +1,7 @@
 package com.hoolix.processor.sinks
 
+import java.util.concurrent.TimeUnit
+
 import akka.NotUsed
 import akka.kafka.ConsumerMessage.CommittableOffsetBatch
 import akka.stream.scaladsl.{Flow, Sink}
@@ -26,14 +28,16 @@ object ElasticsearchBulkProcessorSink {
     val esBulkConfig = config.getConfig("elasticsearch.bulk")
     val maxBulkSizeInBytes = esBulkConfig.getString("max-size-in-bytes")
     val maxBulkActions = esBulkConfig.getInt("max-actions")
+    val bulkTimeout = esBulkConfig.getString("timeout")
 
-    new ElasticsearchBulkProcessorSink(elasticsearchClient, maxBulkSizeInBytes, maxBulkActions, concurrentRequests, ec)
+    new ElasticsearchBulkProcessorSink(elasticsearchClient, maxBulkSizeInBytes, maxBulkActions, bulkTimeout, concurrentRequests, ec)
   }
 
   class ElasticsearchBulkProcessorSink(
                                       elasticsearchClient: TransportClient,
                                       maxBulkSizeInBytes: String,
                                       maxBulkSize: Int,
+                                      bulkTimeoutTimeValue: String,
                                       concurrentRequests: Int,
                                       implicit val ec: ExecutionContext
                                     ) {
@@ -68,6 +72,11 @@ object ElasticsearchBulkProcessorSink {
         new ByteSizeValue(5, ByteSizeUnit.MB),
         "elasticsearch.bulk.max-size-in-bytes"
       ))
+      .setFlushInterval(TimeValue.parseTimeValue(
+        bulkTimeoutTimeValue,
+        new TimeValue(60, TimeUnit.SECONDS),
+        "elasticsearch.bulk.timeout"
+      ))
       .setConcurrentRequests(concurrentRequests)
       .setBackoffPolicy(
         BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3)
@@ -81,16 +90,19 @@ object ElasticsearchBulkProcessorSink {
       }
     }
 
-    def processKafkaTransmitted(event: KafkaTransmitted): Unit = {
-      bulkProcessor.add(event.toIndexRequest.source(event.event.toPayload), event.committableOffset)
+    def addEventToBulk(incomingEvent: KafkaTransmitted): Unit = {
+      bulkProcessor.add(
+        incomingEvent.toIndexRequest.source(incomingEvent.event.toPayload),
+        incomingEvent.committableOffset
+      )
     }
 
     def sink: Sink[KafkaTransmitted, NotUsed] = {
       val flow = startingFlow.mapConcat(_.to[immutable.Seq])
       if (concurrentRequests < 1) {
-        flow.to(Sink.foreach(processKafkaTransmitted))
+        flow.to(Sink.foreach(addEventToBulk)).named("es-bulk-processor-sink-single")
       } else {
-        flow.to(Sink.foreachParallel(concurrentRequests)(processKafkaTransmitted))
+        flow.to(Sink.foreachParallel(concurrentRequests)(addEventToBulk)).named("es-bulk-processor-sink-parallel")
       }
     }
   }

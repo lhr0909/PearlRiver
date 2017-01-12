@@ -70,6 +70,14 @@ dependencies {
     compile "eu.bitwalker:UserAgentUtils:1.20"
     //TODO: explicitly add jackson
 
+    // Monitor依赖
+    compile "io.kamon:kamon-core_2.11:0.6.5"
+    compile "io.kamon:kamon-akka_2.11:0.6.3"
+    compile "io.kamon:kamon-influxdb_2.11:0.6.3"
+    compile "io.kamon:kamon-system-metrics_2.11:0.6.5"
+//    compile "io.kamon:kamon-log-reporter_2.11:0.6.5"
+    compile 'org.aspectj:aspectjweaver:1.8.10'
+
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.7'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.7'
     compile group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: '2.7'
