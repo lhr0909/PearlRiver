@@ -3,8 +3,7 @@ package com.hoolix.processor.flows
 import akka.NotUsed
 import com.hoolix.processor.decoders.Decoder
 import akka.stream.scaladsl.Flow
-import com.hoolix.processor.models.{Event, KafkaTransmitted}
-
+import com.hoolix.processor.models.KafkaTransmitted
 import scala.concurrent.Future
 
 /**

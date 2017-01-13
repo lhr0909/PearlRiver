@@ -1,4 +1,5 @@
 {
+  "dynamic": "strict",
   "_all": {
     "enabled": true,
     "omit_norms": true

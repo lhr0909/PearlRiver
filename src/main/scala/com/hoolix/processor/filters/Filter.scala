@@ -8,4 +8,10 @@ import com.hoolix.processor.models.Event
   */
 trait Filter {
   def handle(event: Event): Event
+  def handle_preview(event: Event): Event = ???
+}
+
+object Filter {
+  type FilterPrecondition = (Event) => Boolean
+  type ConditionedFilter = (Seq[FilterPrecondition], Filter)
 }
