@@ -11,6 +11,7 @@ import scala.concurrent.Future
   */
 object FiltersLoadPreviewFlow {
   def apply(parallelism: Int, filters: Seq[ConditionedFilter]): Flow[Event, (Event, Seq[ConditionedFilter]), NotUsed] = {
+    println("enter FiltersLoadPreviewFlow")
     Flow[Event].mapAsync(parallelism) { event: Event =>
       Future.successful((event, filters))
     }

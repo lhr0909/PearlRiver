@@ -29,6 +29,8 @@ case class SplitFilter(targetField: String, delimiter: String, limit: Int = -1, 
 
   override def handle_preview(event: Event): Event = {
 
+    println("enter split handle preview")
+
     val payload = event.asInstanceOf[IntermediatePreviewEvent].toPayload
     val highlights = event.asInstanceOf[IntermediatePreviewEvent].highlights
     val (start: Int, end: Int) = highlights(targetField).asInstanceOf[(Int, Int)]
@@ -52,6 +54,7 @@ case class SplitFilter(targetField: String, delimiter: String, limit: Int = -1, 
       })
 
     }
+    println("leave split handle preview")
     IntermediatePreviewEvent(highlights, payload)
   }
 }

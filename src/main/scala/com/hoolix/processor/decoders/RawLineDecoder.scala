@@ -6,14 +6,25 @@ import org.slf4j.LoggerFactory
 case class RawLineDecoder(token: String, _type: String, tags: Seq[String], uploadType: String) extends Decoder {
   lazy val logger = LoggerFactory.getLogger(this.getClass)
   override def decode(event: Event): XYZBasicEvent = {
+    println("enter RawLineDecoder")
     val payload = event.asInstanceOf[LineEvent].toPayload
-    new XYZBasicEvent(
+    println(event)
+    println(payload)
+
+    println(token)
+    println(_type)
+    println(tags)
+    println(uploadType)
+    println(payload("message").asInstanceOf[String])
+    val result = XYZBasicEvent(
       token,
       _type,
       tags,
-      payload.get("message").asInstanceOf[String],
+      payload("message").asInstanceOf[String],
       uploadType,
       System.currentTimeMillis
     )
+    println("leave RawLineDecoder")
+    result
   }
 }

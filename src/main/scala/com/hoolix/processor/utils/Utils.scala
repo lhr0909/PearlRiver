@@ -179,4 +179,28 @@ object Utils {
     split_with_position(cdr, delimiter, offset + car.length + delimiter_match_length, level-1, buffer)
   }
 
+  def deepGet(map: collection.mutable.Map[String, Any], target: String): Any = {
+    val head = target.split(".").head
+    val tail = target.split(".").tail
+    if (tail.isEmpty)
+      map(head)
+    else
+      deepGet(
+        map(head).asInstanceOf[collection.mutable.Map[String, Any]],
+        tail.mkString(".")
+      )
+  }
+
+  def deepPut(map: collection.mutable.Map[String, Any], target: String, value: Any): Unit = {
+    val head = target.split(".").head
+    val tail = target.split(".").tail
+    if (tail.isEmpty)
+      map.put(head, value)
+    else
+      deepPut(
+        map(head).asInstanceOf[collection.mutable.Map[String, Any]],
+        tail.mkString("."),
+        value
+      )
+  }
 }

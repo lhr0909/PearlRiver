@@ -14,6 +14,7 @@ object FilterPreviewFlow {
     parallelism: Int
   ): Flow[(Event, Seq[ConditionedFilter]), Event, NotUsed] = {
 
+    println("enter FilterPreviewFlow")
     Flow[(Event, Seq[ConditionedFilter])].mapAsync(parallelism) { tuple: (Event, Seq[ConditionedFilter]) =>
       val (event, filters) = tuple
       var filtered: Event = event

@@ -185,6 +185,63 @@ object ConfigLoader  {
     parse_raw_config_list(user_config.toSeq)
   }
 
+  def parse_from_json(json:String) = {
+    val parsed = JsonMethods.parse(json)
+    println(parsed)
+    println(parsed.getClass)
+
+
+    // seems ordered, but not for sure
+    val jsonObject = parsed.extractOpt[Seq[Map[String, Any]]].getOrElse(Seq())
+    println(jsonObject)
+    println(jsonObject.getClass)
+
+    import scala.collection.JavaConverters._
+    println(jsonObject.asJava)
+    println(jsonObject.asJava.getClass)
+
+    val javaObject = JavaConversions.asJavaCollection(jsonObject)
+    println(javaObject)
+    println(javaObject.getClass)
+
+
+    //    val jsonObject = parsed.extractOpt[java.util.ArrayList[java.util.LinkedHashMap[String, Any]]].getOrElse(new java.util.ArrayList())
+
+    //    jsonString
+    //    Source.fromFile("conf/mapping/" + event.indexType + ".mapping.json").mkString
+    //    val yaml = new Yaml()
+    //    val configs = yaml.load(new FileInputStream(file))
+    val configs = jsonObject
+      //      .asInstanceOf[java.util.ArrayList[java.util.LinkedHashMap[String,Any]]]
+      .map { case m =>
+      val jsonWriter = new ObjectMapper()
+      RawConfigEntry(
+        // TODO
+        // 空字符串并不会被视为空值,如果在配置文件中指定token为空串的话,token的值不会被设为*
+        token  = String.valueOf(m.getOrDefault("token", "*")),
+        name   = String.valueOf(m.getOrDefault("name", "")),
+        pool   = String.valueOf(m.getOrDefault("pool", "global")),
+        config_type = String.valueOf(m.getOrDefault("type", "")),
+        types  = m.getOrDefault("types", null) match {
+          case null  => Seq("*")
+          case types => types.asInstanceOf[java.util.ArrayList[String]].toSeq
+        },
+        target = String.valueOf(m.getOrDefault("target", "")),
+        field  = jsonWriter.writeValueAsString(m.getOrDefault("field", "")),
+        require= jsonWriter.writeValueAsString(m.getOrDefault("require", "")),
+        //          args   = Converter.java_any_to_scala(m.getOrDefault("args", None)),
+        args   = m.getOrDefault("args", None)
+      )
+    }
+    //configs.foreach(println)
+
+    //val (type_config, user_config) = configs.partition(_.config_type == "config")
+    val user_config = configs
+
+    //parse_global_config(global_config)
+    parse_raw_config_list(user_config.toSeq)
+  }
+
 
   def load_from_yaml(file:String) = {
     logger.info(s"load pipeline from $file")

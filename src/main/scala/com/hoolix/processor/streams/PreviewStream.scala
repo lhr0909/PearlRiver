@@ -22,7 +22,7 @@ import scala.concurrent.{ExecutionContext, Future}
   * Created by peiyuchao on 2017/1/11.
   */
 class PreviewStream(
-                     sample: String,
+                     sample: Seq[String],
                      token: String,
                      `type`: String,
                      filters: Seq[ConditionedFilter],
@@ -32,79 +32,23 @@ class PreviewStream(
                      implicit val ec: ExecutionContext
                    ) {
 
-  val source: Source[LineEvent, NotUsed] = Source.fromIterator(() => sample.split("\n").toIterator).mapAsync(parallelism) {
+  val source: Source[LineEvent, NotUsed] = Source.fromIterator(() => sample.toIterator).mapAsync(parallelism) {
     (message) => Future.successful(LineEvent(message))
   }
   val decodePreviewFlow = DecodePreviewFlow(parallelism, RawLineDecoder(token, `type`, Seq(), "batch"))
   val filtersLoadPreviewFlow = FiltersLoadPreviewFlow(parallelism, filters)
   val filterPreviewFlow = FilterPreviewFlow(parallelism)
-  val sink = Sink.foreach(println)
+//  val sink = Sink.foreach(println)
 
   def stream = {
     source
       .viaMat(decodePreviewFlow)(Keep.left)
       .viaMat(filtersLoadPreviewFlow)(Keep.left)
       .viaMat(filterPreviewFlow)(Keep.left)
-      .toMat(sink)(Keep.left)
+//      .toMat(sink)(Keep.left)
   }
 
-  def run()(implicit materializer: Materializer): Unit = {
-    stream.run()
-  }
-//
-//  source.mapAsync(parallelism, )
-//  val sink = println
-//
-//  def Stream: RunnableGraph[Control] = {
-//
-//    source
-//      .viaMat(decodeFlow)(Keep.left)
-//      .viaMat(FiltersLoadFlow(parallelism))(Keep.left)
-//      .viaMat(filterFlow)(Keep.left)
-//      .viaMat(CreateIndexFlow(
-//        parallelism,
-//        esClient,
-//        ElasticsearchClient.esIndexCreationSettings()
-//      ))(Keep.left)
-//      .toMat(esSink.sink)(Keep.left)
+//  def run()(implicit materializer: Materializer): Unit = {
+//    stream.run()
 //  }
-
-
-
-//  //TODO: get stream cache into SQL
-//
-//  val streamCache: TrieMap[String, Control] = TrieMap()
-//
-//  def apply(
-//             parallelism: Int,
-//             esClient: TransportClient,
-//             kafkaTopic: String
-//           )(implicit config: Config, system: ActorSystem, ec: ExecutionContext): KafkaToEsStream =
-//    new KafkaToEsStream(parallelism, esClient, kafkaTopic, config, system, ec)
-//
-//
-//
-//
-//    val kafkaSource = KafkaSource(parallelism, kafkaTopic)
-//    //    val esSink = ElasticsearchBulkProcessorSink(esClient, parallelism)
-//    val esSink = ElasticsearchBulkRequestSink(esClient, parallelism)
-//
-//    def stream: RunnableGraph[Control] = {
-//
-//      val decodeFlow = DecodeFlow(parallelism, FileBeatDecoder())
-//
-//
-//      val filterFlow = FilterFlow(parallelism)
-//
-//      kafkaSource
-//        .viaMat(decodeFlow)(Keep.left)
-//        .viaMat(FiltersLoadFlow(parallelism))(Keep.left)
-//        .viaMat(filterFlow)(Keep.left)
-//        .viaMat(CreateIndexFlow(
-//          parallelism,
-//          esClient,
-//          ElasticsearchClient.esIndexCreationSettings()
-//        ))(Keep.left)
-//        .toMat(esSink.sink)(Keep.left)
-//    }
 }
