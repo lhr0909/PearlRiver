@@ -6,13 +6,12 @@ import org.elasticsearch.action.index.IndexRequest
 /**
   * Created by peiyuchao on 2017/1/5.
   */
-case class KafkaTransmitted(committableOffset: CommittableOffset, event: Event) extends ElasticSearchSinkAble {
+case class KafkaTransmitted(committableOffset: CommittableOffset, event: Event) extends ElasticSearchSinkable {
   def topic: String = committableOffset.partitionOffset.key.topic
   def partition: Int = committableOffset.partitionOffset.key.partition
   def offset: Long = committableOffset.partitionOffset.offset
 
-  override def indexName: String = s"$topic.${event.indexName}"
+  override def indexName: String = event.indexName
   override def indexType: String = event.indexType
   override def docId: String = s"$topic.$partition.$offset"
-  override def toIndexRequest: IndexRequest = new IndexRequest(indexName, indexType, docId)
 }

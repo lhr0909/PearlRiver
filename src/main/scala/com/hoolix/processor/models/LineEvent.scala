@@ -11,5 +11,4 @@ case class LineEvent(message: String) extends Event {
   override def indexName = ???
   override def indexType = ???
   override def docId = ???
-  override def toIndexRequest = new IndexRequest(indexName, indexType, docId)
 }
