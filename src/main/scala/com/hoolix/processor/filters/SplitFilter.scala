@@ -1,6 +1,7 @@
 package com.hoolix.processor.filters
 
-import com.hoolix.processor.models.{Event, IntermediateEvent}
+import com.hoolix.processor.models.IntermediateEvent
+import com.hoolix.processor.models.events.{Event, IntermediateEvent}
 
 case class SplitFilter(targetField: String, delimiter: String, limit: Int = -1, names: Seq[String] = Seq()) extends Filter {
   override def handle(event: Event): Event = {

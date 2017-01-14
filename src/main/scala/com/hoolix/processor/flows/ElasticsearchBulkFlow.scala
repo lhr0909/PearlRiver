@@ -58,7 +58,7 @@ object ElasticsearchBulkFlow {
                 )
               )
 
-              offsets :+= incomingEvent.committableOffset
+              offsets :+= incomingEvent.offset
             }
 
             if (((bulkRequest.estimatedSizeInBytes() < bulkSizeInBytes) &&

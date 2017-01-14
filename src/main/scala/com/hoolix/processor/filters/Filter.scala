@@ -1,6 +1,6 @@
 package com.hoolix.processor.filters
 
-import com.hoolix.processor.models.Event
+import com.hoolix.processor.models.events.Event
 
 /**
   * Hoolix 2017

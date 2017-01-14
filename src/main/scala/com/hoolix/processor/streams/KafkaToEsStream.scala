@@ -7,7 +7,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Keep, RunnableGraph}
 import com.hoolix.processor.decoders.FileBeatDecoder
 import com.hoolix.processor.filters.loaders.ConfigLoader
-import com.hoolix.processor.flows.{CreateIndexFlow, KafkaDecodeFlow, FilterFlow}
+import com.hoolix.processor.flows.{CreateIndexFlow, DecodeFlows, FilterFlow}
 import com.hoolix.processor.modules.ElasticsearchClient
 import com.hoolix.processor.sinks.{ElasticsearchBulkProcessorSink, ElasticsearchBulkRequestSink}
 import com.hoolix.processor.sources.KafkaSource
@@ -67,7 +67,7 @@ object KafkaToEsStream {
 
     def stream: RunnableGraph[Control] = {
 
-      val decodeFlow = KafkaDecodeFlow(parallelism, FileBeatDecoder())
+      val decodeFlow = DecodeFlows.kafkaDecodeFlow(parallelism, FileBeatDecoder())
       val apache_access = ConfigLoader.build_from_local("conf/pipeline/apache_access.yml")
       val apache_error = ConfigLoader.build_from_local("conf/pipeline/apache_error.yml")
       val nginx_access = ConfigLoader.build_from_local("conf/pipeline/nginx_access.yml")

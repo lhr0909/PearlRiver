@@ -4,7 +4,8 @@ import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.hoolix.processor.filters.Filter
 import com.hoolix.processor.flows.FilterFlow.FilterMatchingRule
-import com.hoolix.processor.models.{Event, KafkaTransmitted}
+import com.hoolix.processor.models.KafkaTransmitted
+import com.hoolix.processor.models.events.Event
 
 import scala.concurrent.Future
 
@@ -45,7 +46,7 @@ object FilterFlow {
           }
           if (required) filtered = elem._2.handle(filtered)
         }
-        Future.successful(KafkaTransmitted(incomingEvent.committableOffset, filtered))
+        Future.successful(KafkaTransmitted(incomingEvent.offset, filtered))
       }
     }.named("filter-flow")
 

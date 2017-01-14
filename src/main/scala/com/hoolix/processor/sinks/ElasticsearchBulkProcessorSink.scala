@@ -93,7 +93,7 @@ object ElasticsearchBulkProcessorSink {
     def addEventToBulk(incomingEvent: KafkaTransmitted): Unit = {
       bulkProcessor.add(
         incomingEvent.toIndexRequest.source(incomingEvent.event.toPayload),
-        incomingEvent.committableOffset
+        incomingEvent.offset
       )
     }
 

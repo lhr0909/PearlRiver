@@ -4,6 +4,7 @@ import java.nio.charset.Charset
 
 import akka.stream.scaladsl.{Framing, Source}
 import akka.util.ByteString
+import com.hoolix.processor.models.events.LineEvent
 import com.hoolix.processor.models.{ByteStringTransmitted, FileOffset, LineEvent}
 
 import scala.concurrent.Future
@@ -12,7 +13,7 @@ import scala.concurrent.Future
   * Hoolix 2017
   *
   * This source handles incoming [[akka.util.ByteString]] streams via Akka HTTP and forms each line
-  * into a [[com.hoolix.processor.models.LineEvent]]
+  * into a [[LineEvent]]
   *
   * Created by simon on 1/13/17.
   */

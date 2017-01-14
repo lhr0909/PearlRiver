@@ -9,7 +9,7 @@ import java.util.regex.Pattern
 
 import com.hoolix.processor.filters._
 import com.hoolix.processor.flows.FilterFlow.FilterMatchingRule
-import com.hoolix.processor.models.Event
+import com.hoolix.processor.models.events.Event
 import com.hoolix.processor.utils.Converter
 import org.apache.commons.lang3.StringEscapeUtils
 

@@ -1,6 +1,4 @@
-package com.hoolix.processor.models
-
-import org.elasticsearch.action.index.IndexRequest
+package com.hoolix.processor.models.events
 
 /**
   * Created by peiyuchao on 2017/1/6.
