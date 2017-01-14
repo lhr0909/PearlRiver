@@ -1,7 +1,6 @@
 package com.hoolix.processor.decoders
 
 import com.hoolix.processor.models.events.{Event, LineEvent, XYZBasicEvent}
-import com.hoolix.processor.models.{LineEvent, XYZBasicEvent}
 import org.slf4j.LoggerFactory
 
 /**

@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.hoolix.processor.filters.Filter
 import com.hoolix.processor.flows.FilterFlow.FilterMatchingRule
-import com.hoolix.processor.models.KafkaTransmitted
+import com.hoolix.processor.models.{PortFactory, Shipper, SourceMetadata}
 import com.hoolix.processor.models.events.Event
 
 import scala.concurrent.Future
@@ -15,14 +15,22 @@ import scala.concurrent.Future
 object FilterFlow {
   type EventFilterPredicate = (Event) => Boolean
   type FilterMatchingRule = (Seq[EventFilterPredicate], Filter)
+}
+
+case class FilterFlow(
+                       parallelism: Int,
+                       filters: Map[String, Map[String, Seq[FilterMatchingRule]]]
+                     ) {
+
+  type SrcMeta <: SourceMetadata
+  type PortFac <: PortFactory
+
+  type Shipperz = Shipper[SrcMeta, PortFac]
 
   // TODO 效率可能会比较低，因为每一条新的日志都要查询
-  def apply(
-             parallelism: Int,
-             filters: Map[String, Map[String, Seq[FilterMatchingRule]]]
-           ): Flow[KafkaTransmitted, KafkaTransmitted, NotUsed] = {
+  def flow(): Flow[Shipperz, Shipperz, NotUsed] = {
 
-    Flow[KafkaTransmitted].mapAsync(parallelism) { incomingEvent: KafkaTransmitted =>
+    Flow[Shipperz].mapAsync(parallelism) { incomingEvent: Shipperz =>
       var filtered: Event = incomingEvent.event
       val payload = filtered.toPayload
       //      filters.getOrElse(payload("token").asInstanceOf[String], filters("*"))
@@ -46,7 +54,13 @@ object FilterFlow {
           }
           if (required) filtered = elem._2.handle(filtered)
         }
-        Future.successful(KafkaTransmitted(incomingEvent.offset, filtered))
+        Future.successful(
+          Shipper(
+            filtered,
+            incomingEvent.sourceMetadata,
+            incomingEvent.portFactory
+          )
+        )
       }
     }.named("filter-flow")
 

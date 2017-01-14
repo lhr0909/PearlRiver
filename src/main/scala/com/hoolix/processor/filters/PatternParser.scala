@@ -2,7 +2,6 @@ package com.hoolix.processor.filters
 
 import java.util.regex.Pattern
 
-import com.hoolix.processor.models.IntermediateEvent
 import com.hoolix.processor.models.events.{Event, IntermediateEvent}
 import com.hoolix.processor.utils.Utils
 

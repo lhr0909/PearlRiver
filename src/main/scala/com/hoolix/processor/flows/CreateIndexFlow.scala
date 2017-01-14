@@ -2,7 +2,7 @@ package com.hoolix.processor.flows
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
-import com.hoolix.processor.models.KafkaTransmitted
+import com.hoolix.processor.models._
 import org.elasticsearch.ResourceAlreadyExistsException
 import org.elasticsearch.action.ActionListener
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse
@@ -25,15 +25,40 @@ object CreateIndexFlow {
   //TODO: get this index cache into SQL
 
   val createdIndexCache: TrieMap[String, Boolean] = TrieMap()
+}
 
+case class CreateIndexFlow(
+                            parallelism: Int,
+                            esClient: TransportClient,
+                            indexSettings: Settings.Builder
+                          ) {
 //  lazy val defaultMapping: String = scala.io.Source.fromFile("conf/es-default-mapping.json").mkString
+
+  type SrcMeta <: SourceMetadata
+  type PortFac <: PortFactory
+
+  type Shipperz = Shipper[SrcMeta, PortFac]
+
+  def getIndexName(shipper: Shipperz): String = {
+    shipper.portFactory match {
+      case epf: ElasticsearchPortFactory => epf.generateIndexName(shipper.event)
+      case _ => "_unknown_"
+    }
+  }
+
+  def getIndexType(shipper: Shipperz): String = {
+    shipper.portFactory match {
+      case epf: ElasticsearchPortFactory => epf.generateIndexType(shipper.event)
+      case _ => "_unknown_"
+    }
+  }
 
   def exist(
              esClient: TransportClient,
-             event: KafkaTransmitted
+             event: Shipperz
            )(implicit ec: ExecutionContext): Future[IndicesExistsResponse] = {
 
-    if (createdIndexCache.contains(event.indexName)) {
+    if (CreateIndexFlow.createdIndexCache.contains(getIndexName(event))) {
       Future.successful(new IndicesExistsResponse(true))
     } else {
       val promise = Promise[IndicesExistsResponse]()
@@ -42,7 +67,7 @@ object CreateIndexFlow {
 
         override def onFailure(e: Exception) = promise.failure(e)
       }
-      esClient.admin().indices().prepareExists(event.indexName).execute(listener)
+      esClient.admin().indices().prepareExists(getIndexName(event)).execute(listener)
 
       promise.future
     }
@@ -51,44 +76,40 @@ object CreateIndexFlow {
   def create(
               esClient: TransportClient,
               indexSettings: Settings.Builder,
-              event: KafkaTransmitted
+              event: Shipperz
             )(implicit ec: ExecutionContext): Future[CreateIndexResponse] = {
 
-    val mapping = Source.fromFile("conf/mapping/" + event.indexType + ".mapping.json").mkString
+    val mapping = Source.fromFile("conf/mapping/" + getIndexType(event) + ".mapping.json").mkString
     val promise = Promise[CreateIndexResponse]()
     val listener = new ActionListener[CreateIndexResponse] {
       override def onResponse(response: CreateIndexResponse) = promise.success(response)
       override def onFailure(e: Exception) = promise.failure(e)
     }
-    esClient.admin().indices().prepareCreate(event.indexName)
+    esClient.admin().indices().prepareCreate(getIndexName(event))
       .setSettings(indexSettings)
-      .addMapping(event.indexType, mapping)
+      .addMapping(getIndexType(event), mapping)
       .execute(listener)
 
     promise.future
   }
 
-  def apply(
-             parallelism: Int,
-             esClient: TransportClient,
-             indexSettings: Settings.Builder
-           )(implicit ec: ExecutionContext): Flow[KafkaTransmitted, KafkaTransmitted, NotUsed] = {
-    Flow[KafkaTransmitted].mapAsync[KafkaTransmitted](parallelism) { event =>
+  def flow(implicit ec: ExecutionContext): Flow[Shipperz, Shipperz, NotUsed] = {
+    Flow[Shipperz].mapAsync[Shipperz](parallelism) { event =>
 
-      val p = Promise[KafkaTransmitted]()
+      val p = Promise[Shipperz]()
 
       Future {
         exist(esClient, event) onComplete {
           case Success(valueExist) =>
             if (valueExist.isExists) {
-              createdIndexCache.put(event.indexName, true)
+              CreateIndexFlow.createdIndexCache.put(getIndexName(event), true)
               p.success(event)
             } else {
-              println(s"index ${ event.indexName } does not exist, creating it")
+              println(s"index ${ getIndexName(event) } does not exist, creating it")
               create(esClient, indexSettings, event) onComplete {
                 case Success(_) =>
-                  println(s"successfully created index ${ event.indexName }")
-                  createdIndexCache.put(event.indexName, true)
+                  println(s"successfully created index ${ getIndexName(event) }")
+                  CreateIndexFlow.createdIndexCache.put(getIndexName(event), true)
                   p.success(event)
 
                 case Failure(e: RemoteTransportException) =>

@@ -7,10 +7,10 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Keep, RunnableGraph}
 import com.hoolix.processor.decoders.FileBeatDecoder
 import com.hoolix.processor.filters.loaders.ConfigLoader
-import com.hoolix.processor.flows.{CreateIndexFlow, DecodeFlows, FilterFlow}
+import com.hoolix.processor.flows.{CreateIndexFlow, DecodeFlow, FilterFlow}
 import com.hoolix.processor.modules.ElasticsearchClient
 import com.hoolix.processor.sinks.{ElasticsearchBulkProcessorSink, ElasticsearchBulkRequestSink}
-import com.hoolix.processor.sources.KafkaSource
+import com.hoolix.processor.sources.KafkaToEsSource
 import com.typesafe.config.Config
 import org.elasticsearch.client.transport.TransportClient
 
@@ -58,7 +58,7 @@ object KafkaToEsStream {
 
     val futureExecutionContext: ExecutionContext = system.dispatchers.lookup("future-dispatcher")
 
-    val kafkaSource = KafkaSource(parallelism, kafkaTopic)
+    val kafkaSource = KafkaToEsSource(parallelism, kafkaTopic)
 
     val esBulkProcessorSink = ElasticsearchBulkProcessorSink(esClient, parallelism)(config, futureExecutionContext)
     val esBulkRequestSink = ElasticsearchBulkRequestSink(esClient, parallelism)(config, futureExecutionContext)
@@ -67,7 +67,7 @@ object KafkaToEsStream {
 
     def stream: RunnableGraph[Control] = {
 
-      val decodeFlow = DecodeFlows.kafkaDecodeFlow(parallelism, FileBeatDecoder())
+      val decodeFlow = DecodeFlow(parallelism, FileBeatDecoder()).flow
       val apache_access = ConfigLoader.build_from_local("conf/pipeline/apache_access.yml")
       val apache_error = ConfigLoader.build_from_local("conf/pipeline/apache_error.yml")
       val nginx_access = ConfigLoader.build_from_local("conf/pipeline/nginx_access.yml")
@@ -90,14 +90,14 @@ object KafkaToEsStream {
 
       println(filtersMap)
 
-      val filterFlow = FilterFlow(parallelism, filtersMap)
+      val filterFlow = FilterFlow(parallelism, filtersMap).flow
       val createIndexFlow = CreateIndexFlow(
           parallelism,
           esClient,
           ElasticsearchClient.esIndexCreationSettings()
-        )(futureExecutionContext)
+        ).flow(futureExecutionContext)
 
-      kafkaSource
+      kafkaSource.source()
         .viaMat(decodeFlow)(Keep.left)
         .viaMat(filterFlow)(Keep.left)
         .viaMat(createIndexFlow)(Keep.left)
@@ -110,5 +110,3 @@ object KafkaToEsStream {
     }
   }
 }
-
-

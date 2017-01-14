@@ -14,7 +14,7 @@ import scala.concurrent.Future
   * Hoolix 2017
   * Created by simon on 1/14/17.
   */
-case class KafkaSource(parallel: Int, kafkaTopic: String) extends AbstractSource {
+case class KafkaToEsSource(parallel: Int, kafkaTopic: String) extends AbstractSource {
   override type SrcMeta = KafkaSourceMetadata
   override type PortFac = ElasticsearchPortFactory
 
@@ -38,4 +38,5 @@ case class KafkaSource(parallel: Int, kafkaTopic: String) extends AbstractSource
       )
     )
   }
+
 }

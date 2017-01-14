@@ -1,6 +1,5 @@
 package com.hoolix.processor.filters
 
-import com.hoolix.processor.models.IntermediateEvent
 import com.hoolix.processor.models.events.{Event, IntermediateEvent}
 
 import scala.util.Random

@@ -3,7 +3,6 @@ package com.hoolix.processor.decoders
 import java.util.Date
 
 import com.hoolix.processor.models.events.{Event, FileBeatEvent, XYZBasicEvent}
-import com.hoolix.processor.models.{FileBeatEvent, XYZBasicEvent}
 import org.slf4j.LoggerFactory
 
 /**
