@@ -17,18 +17,15 @@ object FilterFlow {
   type FilterMatchingRule = (Seq[EventFilterPredicate], Filter)
 }
 
-case class FilterFlow(
+case class FilterFlow[SrcMeta <: SourceMetadata, PortFac <: PortFactory](
                        parallelism: Int,
                        filters: Map[String, Map[String, Seq[FilterMatchingRule]]]
                      ) {
 
-  type SrcMeta <: SourceMetadata
-  type PortFac <: PortFactory
-
   type Shipperz = Shipper[SrcMeta, PortFac]
 
   // TODO 效率可能会比较低，因为每一条新的日志都要查询
-  def flow(): Flow[Shipperz, Shipperz, NotUsed] = {
+  def flow(): Flow[Shipper[SrcMeta, PortFac], Shipper[SrcMeta, PortFac], NotUsed] = {
 
     Flow[Shipperz].mapAsync(parallelism) { incomingEvent: Shipperz =>
       var filtered: Event = incomingEvent.event

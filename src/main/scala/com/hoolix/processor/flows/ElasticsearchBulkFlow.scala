@@ -2,7 +2,6 @@ package com.hoolix.processor.flows
 
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import com.hoolix.processor.flows.ElasticsearchBulkFlow.BulkRequestAndOffsets
 import com.hoolix.processor.models._
 import org.elasticsearch.action.bulk.BulkRequest
 import org.elasticsearch.common.unit.ByteSizeValue

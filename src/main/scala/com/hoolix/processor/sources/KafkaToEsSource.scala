@@ -1,4 +1,5 @@
 package com.hoolix.processor.sources
+import akka.actor.ActorSystem
 import akka.kafka.ConsumerMessage.CommittableMessage
 import akka.kafka.Subscriptions
 import akka.kafka.scaladsl.Consumer
@@ -14,7 +15,8 @@ import scala.concurrent.Future
   * Hoolix 2017
   * Created by simon on 1/14/17.
   */
-case class KafkaToEsSource(parallel: Int, kafkaTopic: String) extends AbstractSource[KafkaSourceMetadata, ElasticsearchPortFactory] {
+case class KafkaToEsSource(parallel: Int, kafkaTopic: String, implicit val system: ActorSystem)
+  extends AbstractSource[KafkaSourceMetadata, ElasticsearchPortFactory] {
 
   override type S = CommittableMessage[Array[Byte], String]
   override type Mat = Control

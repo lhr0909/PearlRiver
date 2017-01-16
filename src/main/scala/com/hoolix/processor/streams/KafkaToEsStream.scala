@@ -8,8 +8,9 @@ import akka.stream.scaladsl.{Keep, RunnableGraph}
 import com.hoolix.processor.decoders.FileBeatDecoder
 import com.hoolix.processor.filters.loaders.ConfigLoader
 import com.hoolix.processor.flows.{CreateIndexFlow, DecodeFlow, FilterFlow}
+import com.hoolix.processor.models.{ElasticsearchPortFactory, KafkaSourceMetadata}
 import com.hoolix.processor.modules.ElasticsearchClient
-import com.hoolix.processor.sinks.{ElasticsearchBulkProcessorSink, ElasticsearchBulkRequestSink}
+import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
 import com.hoolix.processor.sources.KafkaToEsSource
 import com.typesafe.config.Config
 import org.elasticsearch.client.transport.TransportClient
@@ -58,16 +59,16 @@ object KafkaToEsStream {
 
     val futureExecutionContext: ExecutionContext = system.dispatchers.lookup("future-dispatcher")
 
-    val kafkaSource = KafkaToEsSource(parallelism, kafkaTopic)
+    val kafkaSource = KafkaToEsSource(parallelism, kafkaTopic, system)
 
-    val esBulkProcessorSink = ElasticsearchBulkProcessorSink(esClient, parallelism)(config, futureExecutionContext)
-    val esBulkRequestSink = ElasticsearchBulkRequestSink(esClient, parallelism)(config, futureExecutionContext)
+//    val esBulkProcessorSink = ElasticsearchBulkProcessorSink(esClient, parallelism)(config, futureExecutionContext)
+    val esBulkRequestSink = ElasticsearchBulkRequestSink[KafkaSourceMetadata](esClient, parallelism)(config, futureExecutionContext)
     val esSink = esBulkRequestSink
 //    val esSink = esBlulkProcessorSink
 
     def stream: RunnableGraph[Control] = {
 
-      val decodeFlow = DecodeFlow(parallelism, FileBeatDecoder()).flow
+      val decodeFlow = DecodeFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism, FileBeatDecoder()).flow
       val apache_access = ConfigLoader.build_from_local("conf/pipeline/apache_access.yml")
       val apache_error = ConfigLoader.build_from_local("conf/pipeline/apache_error.yml")
       val nginx_access = ConfigLoader.build_from_local("conf/pipeline/nginx_access.yml")
@@ -90,8 +91,8 @@ object KafkaToEsStream {
 
       println(filtersMap)
 
-      val filterFlow = FilterFlow(parallelism, filtersMap).flow
-      val createIndexFlow = CreateIndexFlow(
+      val filterFlow = FilterFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism, filtersMap).flow()
+      val createIndexFlow = CreateIndexFlow[KafkaSourceMetadata](
           parallelism,
           esClient,
           ElasticsearchClient.esIndexCreationSettings()

@@ -14,7 +14,7 @@ case class DecodeFlow[SrcMeta <: SourceMetadata, PortFac <: PortFactory](paralle
 
   type Shipperz = Shipper[SrcMeta, PortFac]
 
-  def flow: Flow[Shipperz, Shipperz, NotUsed] = {
+  def flow: Flow[Shipper[SrcMeta, PortFac], Shipper[SrcMeta, PortFac], NotUsed] = {
     Flow[Shipperz].mapAsync(parallelism)((shipper: Shipperz) => {
       Future.successful(
         Shipper(

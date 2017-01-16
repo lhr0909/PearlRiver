@@ -3,6 +3,8 @@ package com.hoolix.processor.http.routes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import com.hoolix.processor.decoders.RawLineDecoder
+import com.hoolix.processor.flows.DecodeFlow
+import com.hoolix.processor.models.{ElasticsearchPortFactory, FileSourceMetadata}
 import com.hoolix.processor.sources.ByteStringToEsSource
 
 /**
@@ -17,12 +19,11 @@ object FileUploadRoutes {
         extractRequestContext { ctx =>
           fileUpload("file") {
             case (metadata, byteSource) =>
-              ByteStringToEsSource(parallelism = 1, metadata.fileName, byteSource)
-                .via(DecodeFlows.byteStringDecodeFlow(
+              ByteStringToEsSource(parallel = 1, metadata.fileName, byteSource).source()
+                .via(DecodeFlow[FileSourceMetadata, ElasticsearchPortFactory](
                   parallelism = 1,
                   RawLineDecoder(indexAlias.toString, logType, Seq(tag), "file")
-                ))
-
+                ).flow)
               complete(s"$indexAlias, $logType, $tag")
           }
         }

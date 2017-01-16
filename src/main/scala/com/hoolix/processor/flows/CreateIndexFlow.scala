@@ -25,27 +25,21 @@ object CreateIndexFlow {
   val createdIndexCache: TrieMap[String, Boolean] = TrieMap()
 }
 
-case class CreateIndexFlow[SrcMeta <: SourceMetadata, PortFac <: PortFactory](
+case class CreateIndexFlow[SrcMeta <: SourceMetadata](
                             parallelism: Int,
                             esClient: TransportClient,
                             indexSettings: Settings.Builder
                           ) {
 //  lazy val defaultMapping: String = scala.io.Source.fromFile("conf/es-default-mapping.json").mkString
 
-  type Shipperz = Shipper[SrcMeta, PortFac]
+  type Shipperz = Shipper[SrcMeta, ElasticsearchPortFactory]
 
   def getIndexName(shipper: Shipperz): String = {
-    shipper.portFactory match {
-      case epf: ElasticsearchPortFactory => epf.generateIndexName(shipper.event)
-      case _ => "_unknown_"
-    }
+    shipper.portFactory.generateIndexName(shipper.event)
   }
 
   def getIndexType(shipper: Shipperz): String = {
-    shipper.portFactory match {
-      case epf: ElasticsearchPortFactory => epf.generateIndexType(shipper.event)
-      case _ => "_unknown_"
-    }
+    shipper.portFactory.generateIndexType(shipper.event)
   }
 
   def exist(
@@ -88,7 +82,7 @@ case class CreateIndexFlow[SrcMeta <: SourceMetadata, PortFac <: PortFactory](
     promise.future
   }
 
-  def flow(implicit ec: ExecutionContext): Flow[Shipperz, Shipperz, NotUsed] = {
+  def flow(implicit ec: ExecutionContext): Flow[Shipper[SrcMeta, ElasticsearchPortFactory], Shipper[SrcMeta, ElasticsearchPortFactory], NotUsed] = {
     Flow[Shipperz].mapAsync[Shipperz](parallelism) { event =>
 
       val p = Promise[Shipperz]()
