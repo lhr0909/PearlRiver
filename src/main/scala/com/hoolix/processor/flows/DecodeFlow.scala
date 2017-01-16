@@ -10,9 +10,7 @@ import scala.concurrent.Future
 /**
   * Created by peiyuchao on 2017/1/4.
   */
-case class DecodeFlow(parallelism: Int, decoder: Decoder) {
-  type SrcMeta <: SourceMetadata
-  type PortFac <: PortFactory
+case class DecodeFlow[SrcMeta <: SourceMetadata, PortFac <: PortFactory](parallelism: Int, decoder: Decoder) {
 
   type Shipperz = Shipper[SrcMeta, PortFac]
 

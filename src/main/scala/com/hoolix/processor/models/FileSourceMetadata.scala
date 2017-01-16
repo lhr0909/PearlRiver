@@ -5,9 +5,9 @@ package com.hoolix.processor.models
   * Created by simon on 1/14/17.
   */
 case class FileSourceMetadata(fileOffset: FileOffset) extends SourceMetadata {
-  type T = FileOffset
+  type OffsetT = FileOffset
 
-  override val offset: T = fileOffset
+  override val offset: OffsetT = fileOffset
 
   override def id: String = s"${ offset.fileName }.${ offset.offset }"
 }

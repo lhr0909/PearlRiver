@@ -5,7 +5,7 @@ package com.hoolix.processor.models
   * Created by simon on 1/14/17.
   */
 trait SourceMetadata {
-  type T
-  val offset: T
+  type OffsetT
+  val offset: OffsetT
   def id: String
 }

@@ -14,9 +14,7 @@ import scala.concurrent.Future
   * Hoolix 2017
   * Created by simon on 1/14/17.
   */
-case class KafkaToEsSource(parallel: Int, kafkaTopic: String) extends AbstractSource {
-  override type SrcMeta = KafkaSourceMetadata
-  override type PortFac = ElasticsearchPortFactory
+case class KafkaToEsSource(parallel: Int, kafkaTopic: String) extends AbstractSource[KafkaSourceMetadata, ElasticsearchPortFactory] {
 
   override type S = CommittableMessage[Array[Byte], String]
   override type Mat = Control

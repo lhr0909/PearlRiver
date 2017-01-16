@@ -21,21 +21,16 @@ import scala.util.{Failure, Success}
   * Created by simon on 1/7/17.
   */
 object CreateIndexFlow {
-
   //TODO: get this index cache into SQL
-
   val createdIndexCache: TrieMap[String, Boolean] = TrieMap()
 }
 
-case class CreateIndexFlow(
+case class CreateIndexFlow[SrcMeta <: SourceMetadata, PortFac <: PortFactory](
                             parallelism: Int,
                             esClient: TransportClient,
                             indexSettings: Settings.Builder
                           ) {
 //  lazy val defaultMapping: String = scala.io.Source.fromFile("conf/es-default-mapping.json").mkString
-
-  type SrcMeta <: SourceMetadata
-  type PortFac <: PortFactory
 
   type Shipperz = Shipper[SrcMeta, PortFac]
 

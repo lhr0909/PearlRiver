@@ -11,10 +11,7 @@ import scala.concurrent.Future
   * Hoolix 2017
   * Created by simon on 1/1/17.
   */
-abstract class AbstractSource {
-  type SrcMeta <: SourceMetadata
-  type PortFac <: PortFactory
-
+abstract class AbstractSource[SrcMeta <: SourceMetadata, PortFac <: PortFactory] {
   type S
   type Mat
 

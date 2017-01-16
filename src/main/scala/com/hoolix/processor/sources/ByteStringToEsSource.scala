@@ -21,9 +21,7 @@ case class ByteStringToEsSource(
                            parallel: Int,
                            fileName: String,
                            incomingSource: Source[ByteString, Any]
-                           ) extends AbstractSource {
-  override type SrcMeta = FileSourceMetadata
-  override type PortFac = ElasticsearchPortFactory
+                           ) extends AbstractSource[FileSourceMetadata, ElasticsearchPortFactory] {
 
   override type S = (ByteString, Long)
   override type Mat = Any

@@ -8,9 +8,9 @@ import akka.kafka.ConsumerMessage.CommittableOffset
   */
 case class KafkaSourceMetadata(committableOffset: CommittableOffset) extends SourceMetadata {
 
-  type T = CommittableOffset
+  type OffsetT = CommittableOffset
 
-  override val offset: T = committableOffset
+  override val offset: OffsetT = committableOffset
 
   def topic: String = offset.partitionOffset.key.topic
   def partition: Int = offset.partitionOffset.key.partition
