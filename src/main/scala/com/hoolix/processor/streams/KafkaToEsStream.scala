@@ -59,7 +59,7 @@ object KafkaToEsStream {
 
     val futureExecutionContext: ExecutionContext = system.dispatchers.lookup("future-dispatcher")
 
-    val kafkaSource = KafkaToEsSource(parallelism, kafkaTopic, system)
+    val kafkaSource = KafkaToEsSource(parallelism, kafkaTopic, config, system)
 
 //    val esBulkProcessorSink = ElasticsearchBulkProcessorSink(esClient, parallelism)(config, futureExecutionContext)
     val esBulkRequestSink = ElasticsearchBulkRequestSink[KafkaSourceMetadata](esClient, parallelism)(config, futureExecutionContext)

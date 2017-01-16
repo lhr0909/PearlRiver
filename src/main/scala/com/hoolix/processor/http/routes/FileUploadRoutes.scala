@@ -1,11 +1,14 @@
 package com.hoolix.processor.http.routes
 
+import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import com.hoolix.processor.decoders.RawLineDecoder
-import com.hoolix.processor.flows.DecodeFlow
-import com.hoolix.processor.models.{ElasticsearchPortFactory, FileSourceMetadata}
-import com.hoolix.processor.sources.ByteStringToEsSource
+import akka.stream.Materializer
+import com.hoolix.processor.streams.FileToEsStream
+import com.typesafe.config.Config
+import org.elasticsearch.client.transport.TransportClient
+
+import scala.concurrent.ExecutionContext
 
 /**
   * Hoolix 2017
@@ -13,17 +16,25 @@ import com.hoolix.processor.sources.ByteStringToEsSource
   */
 object FileUploadRoutes {
 
-  def apply(): Route = {
+  def apply(esClient: TransportClient)(implicit config: Config, system: ActorSystem, ec: ExecutionContext): Route = {
     pathPrefix("file" / JavaUUID / Segment / Remaining) { (indexAlias, logType, tag) =>
       post {
         extractRequestContext { ctx =>
+          implicit val materializer = ctx.materializer
+
           fileUpload("file") {
-            case (metadata, byteSource) =>
-              ByteStringToEsSource(parallel = 1, metadata.fileName, byteSource).source()
-                .via(DecodeFlow[FileSourceMetadata, ElasticsearchPortFactory](
-                  parallelism = 1,
-                  RawLineDecoder(indexAlias.toString, logType, Seq(tag), "file")
-                ).flow)
+
+            case (fileInfo, byteStringSource) =>
+              FileToEsStream(
+                parallelism = 1,
+                esClient,
+                fileInfo,
+                byteStringSource,
+                indexAlias.toString,
+                logType,
+                tag
+              ).stream.run()
+
               complete(s"$indexAlias, $logType, $tag")
           }
         }

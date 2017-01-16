@@ -112,7 +112,7 @@ object ElasticsearchBulkRequestSink {
                 kafkaOffsets.foldLeft(CommittableOffsetBatch.empty) { (batch, o) =>
                   batch.updated(o.asInstanceOf[CommittableOffset])
                 }.commitScaladsl()
-              case _: Seq[FileSourceMetadata] =>
+              case fileOffsets: Seq[FileSourceMetadata] =>
                 println("not doing anything for fileOffsets for now")
             }
             return

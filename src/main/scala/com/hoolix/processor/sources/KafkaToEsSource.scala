@@ -8,6 +8,7 @@ import akka.stream.scaladsl.Source
 import com.hoolix.processor.models._
 import com.hoolix.processor.models.events.FileBeatEvent
 import com.hoolix.processor.modules.KafkaConsumerSettings
+import com.typesafe.config.Config
 
 import scala.concurrent.Future
 
@@ -15,7 +16,12 @@ import scala.concurrent.Future
   * Hoolix 2017
   * Created by simon on 1/14/17.
   */
-case class KafkaToEsSource(parallel: Int, kafkaTopic: String, implicit val system: ActorSystem)
+case class KafkaToEsSource(
+                            parallel: Int,
+                            kafkaTopic: String,
+                            implicit val config: Config,
+                            implicit val system: ActorSystem
+                          )
   extends AbstractSource[KafkaSourceMetadata, ElasticsearchPortFactory] {
 
   override type S = CommittableMessage[Array[Byte], String]
