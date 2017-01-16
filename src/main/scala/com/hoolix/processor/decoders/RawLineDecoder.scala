@@ -7,11 +7,11 @@ case class RawLineDecoder(token: String, _type: String, tags: Seq[String], uploa
   lazy val logger = LoggerFactory.getLogger(this.getClass)
   override def decode(event: Event): XYZBasicEvent = {
     val payload = event.asInstanceOf[LineEvent].toPayload
-    new XYZBasicEvent(
+    XYZBasicEvent(
       token,
       _type,
       tags,
-      payload.get("message").asInstanceOf[String],
+      payload("message").asInstanceOf[String],
       uploadType,
       System.currentTimeMillis
     )
