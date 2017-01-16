@@ -2,7 +2,7 @@ package com.hoolix.processor.filters
 
 import java.net.InetAddress
 
-import com.hoolix.processor.models.{Event, IntermediateEvent}
+import com.hoolix.processor.models.events.{Event, IntermediateEvent}
 import com.hoolix.processor.utils.Utils
 import com.maxmind.db.CHMCache
 import com.maxmind.geoip2.DatabaseReader

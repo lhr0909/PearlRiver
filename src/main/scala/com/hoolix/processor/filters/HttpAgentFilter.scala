@@ -2,7 +2,7 @@ package com.hoolix.processor.filters
 
 import java.util.regex.Pattern
 
-import com.hoolix.processor.models.{Event, IntermediateEvent}
+import com.hoolix.processor.models.events.{Event, IntermediateEvent}
 import eu.bitwalker.useragentutils.UserAgent
 
 case class HttpAgentFilter(targetField: String) extends Filter{

@@ -1,12 +1,12 @@
-package com.hoolix.processor.models
+package com.hoolix.processor.models.events
 
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
+import java.util.Locale
+
 import org.joda.time.DateTimeZone
 import org.joda.time.chrono.ISOChronology
-import org.joda.time.format.DateTimeFormat
-import org.joda.time.format.DateTimeFormatter
-import java.util.Locale
+import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
 
 /**
   * Created by peiyuchao on 2017/1/5.
@@ -51,10 +51,5 @@ case class FileBeatEvent(
     "tags" -> tags,
     "type" -> _type
   )
-
-  override def indexName = s"${_type}" //add more stuff
-  override def indexType = _type
-  override def docId = ???
-  override def toIndexRequest = ???
 }
 

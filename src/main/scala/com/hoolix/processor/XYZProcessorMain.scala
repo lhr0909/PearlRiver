@@ -8,12 +8,14 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
-import com.hoolix.processor.http.routes.{OfflineQueryRoutes, StreamControlRoutes}
+import com.hoolix.processor.http.routes.{FileUploadRoutes, OfflineQueryRoutes, StreamControlRoutes}
 import com.hoolix.processor.modules.ElasticsearchClient
 import com.typesafe.config.ConfigFactory
 
 import akka.event.Logging
 //import org.slf4j.LoggerFactory
+import kamon.Kamon
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -31,6 +33,7 @@ object XYZProcessorMain extends App {
 
     implicit val system = ActorSystem("xyz-processor", config)
     val logger = Logging.getLogger(system, this)
+//    Kamon.start(config.withFallback(ConfigFactory.defaultReference()))
 
     val decider: Supervision.Decider = { e =>
       logger.error("Unhandled exception in stream", e)
@@ -39,7 +42,7 @@ object XYZProcessorMain extends App {
     }
 
     val materializerSettings = ActorMaterializerSettings(system).withSupervisionStrategy(decider)
-    implicit val materializer = ActorMaterializer(materializerSettings)(system)
+    implicit val materializer = ActorMaterializer(materializerSettings, namePrefix = "xyz-streams")
 
     implicit val executionContext = system.dispatchers.lookup("xyz-dispatcher")
 
@@ -49,7 +52,7 @@ object XYZProcessorMain extends App {
 
     val route: Route = pathSingleSlash {
       complete("后端程序还活着！")
-    } ~ OfflineQueryRoutes() ~ StreamControlRoutes(esClient)
+    } ~ OfflineQueryRoutes() ~ StreamControlRoutes(esClient) ~ FileUploadRoutes()
 
     val bindAddress = httpConfig.getString("bind-address")
     val bindPort = httpConfig.getInt("bind-port")
@@ -69,6 +72,7 @@ object XYZProcessorMain extends App {
         .onComplete { _ =>
           println(s"Waiting for Akka Actor System to shut down in $terminateSeconds seconds... - " + Instant.now)
           println(s"Shutting down Akka Actor System now - " + Instant.now)
+//          Kamon.shutdown()
           system.terminate()
           Await.result(system.whenTerminated, terminateSeconds.seconds)
           println("Terminated safely. Cheers - " + Instant.now)

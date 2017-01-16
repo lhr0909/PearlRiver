@@ -9,7 +9,7 @@ import java.util.regex.Pattern
 
 import com.hoolix.processor.filters.Filter.ConditionedFilter
 import com.hoolix.processor.filters._
-import com.hoolix.processor.models.Event
+import com.hoolix.processor.models.events.Event
 import com.hoolix.processor.utils.Converter
 import org.apache.commons.lang3.StringEscapeUtils
 
@@ -246,9 +246,6 @@ object ConfigLoader  {
   def load_from_yaml(file:String) = {
     logger.info(s"load pipeline from $file")
     val yaml = new Yaml()
-    println(yaml.load(new FileInputStream(file)))
-    println(yaml.load(new FileInputStream(file)).getClass)
-//    println(type(yaml.load(new FileInputStream(file))))
     val configs = yaml.load(new FileInputStream(file))
       .asInstanceOf[java.util.ArrayList[java.util.LinkedHashMap[String,Any]]]
       .map { case m =>

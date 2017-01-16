@@ -4,18 +4,20 @@
 #release="$(awk -F= '/^pipeline_version/{print $2}' gradle.properties)"
 
 pkg="dist/XYZ-Processor.jar"
-release="0.1"
+release="0.1-SNAPSHOT"
 build_pkg="build/libs/xyz-processor-$release.jar"
 
-./gradlew shadowJar $@ || exit 1
-
 mkdir -p dist
+
+./gradlew copyRuntimeLibs $@ || exit 1
+./gradlew assemble $@ || exit 1
 
 cp -f $build_pkg $pkg
 
 tar -czvf xyz-processor-$release.tar \
     --exclude bin/package.sh \
     $pkg \
+    dist/**/* \
     conf/* \
     bin/* || exit 1
 

@@ -1,6 +1,7 @@
 package com.hoolix.processor.filters
 
-import com.hoolix.processor.models.{Event, IntermediateEvent}
+import com.hoolix.processor.models.events.{Event, IntermediateEvent}
+
 import scala.util.Random
 import com.hoolix.processor.utils.Utils.{deepGet, deepPut}
 

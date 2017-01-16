@@ -13,7 +13,6 @@ import org.elasticsearch.client.transport.TransportClient
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-import com.hoolix.processor.models.Event
 
 import scala.concurrent.ExecutionContext
 import com.hoolix.processor.streams.PreviewStream
@@ -30,9 +29,9 @@ import scala.util.{Failure, Success}
 object StreamControlRoutes {
   def apply(esClient: TransportClient)(implicit config: Config, system: ActorSystem, ec: ExecutionContext, mat: Materializer): Route = {
     implicit val formats = org.json4s.DefaultFormats
-    pathPrefix("start" / Remaining) { kafkaTopic =>
+    pathPrefix("start"/ IntNumber / Remaining) { (parallelism, kafkaTopic) =>
       val stream = KafkaToEsStream(
-        parallelism = 20,
+        parallelism,
         esClient,
         kafkaTopic
       )

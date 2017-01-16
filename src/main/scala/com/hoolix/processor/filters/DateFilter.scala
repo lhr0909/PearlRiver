@@ -1,8 +1,9 @@
 package com.hoolix.processor.filters
 
 import java.util.Locale
+
+import com.hoolix.processor.models.events.{Event, IntermediateEvent}
 import com.hoolix.processor.filters.DateFilter.DateTimeFormatterSetting
-import com.hoolix.processor.models.{Event, IntermediateEvent}
 import org.joda.time.chrono.ISOChronology
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.joda.time.{DateTime, DateTimeZone}

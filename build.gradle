@@ -75,6 +75,14 @@ dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.7'
 
 //    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.22'
+    // Monitor依赖
+    compile "io.kamon:kamon-core_2.11:0.6.5"
+    compile "io.kamon:kamon-akka_2.11:0.6.3"
+    compile "io.kamon:kamon-influxdb_2.11:0.6.3"
+    compile "io.kamon:kamon-system-metrics_2.11:0.6.5"
+//    compile "io.kamon:kamon-log-reporter_2.11:0.6.5"
+    compile 'org.aspectj:aspectjweaver:1.8.10'
+
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.7'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.7'
     compile group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: '2.7'
@@ -118,36 +126,7 @@ shadowJar {
     }
 }
 
-jar {
-    baseName "xyz-processor"
-    version = "0.1"
-    zip64  true
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }}
-    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
-    manifest {
-        attributes "Main-Class": "com.hoolix.processor.XYZProcessorMain"
-    }
-    //exec {
-    //    new File("${projectDir}/target/scala-2.10").mkdirs()
-    //   ////commandLine "mkdir", "-p", "${projectDir}/target/scala-2.10"
-    //   println "cp "+ "-f "+ archivePath+ " ${projectDir}/target/scala-2.10/XYZ-Pipeline-assembly-1.0.jar"
-    //   commandLine "cp", "-f", archivePath, "${projectDir}/target/scala-2.10/XYZ-Pipeline-assembly-1.0.jar"
-    //}
+task copyRuntimeLibs(type: Copy) {
+    into "dist/libs"
+    from configurations.runtime
 }
-
-//    //enhance ebean
-//    ant.taskdef(
-//            name: "ebeanEnhance",
-//            classname: "com.avaje.ebean.enhance.ant.AntEnhanceTask",
-//            classpath: configurations.ebeanagent.asPath
-//    )
-//    def ebeanEnhance = { dir, packages ->
-//        println 'enhance ebean :' + dir + " " + packages
-//        ant.ebeanEnhance(classSource: dir, packages: packages, transformArgs: "debug=10")
-//    }
-//    compileJava.doLast {
-//        ebeanEnhance(destinationDir, "com.hoolix.pipeline.bean.*")
-//    }
-//compileScala dependsOn: compileJava
-//task compile(dependsOn: [compileJava, compileScala]) << {
-//}

@@ -2,7 +2,7 @@ package com.hoolix.processor.decoders
 
 import java.util.Date
 
-import com.hoolix.processor.models.{Event, FileBeatEvent, XYZBasicEvent}
+import com.hoolix.processor.models.events.{Event, FileBeatEvent, XYZBasicEvent}
 import org.slf4j.LoggerFactory
 
 /**
@@ -47,7 +47,7 @@ case class  FileBeatDecoder() extends Decoder {
 
     XYZBasicEvent(
       token = token,
-      `type` = typ,
+      _type = typ,
       tags = tags,
       message = msg,
       uploadType = "streaming",

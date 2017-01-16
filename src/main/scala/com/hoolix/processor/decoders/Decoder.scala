@@ -1,6 +1,6 @@
 package com.hoolix.processor.decoders
 
-import com.hoolix.processor.models.Event
+import com.hoolix.processor.models.events.Event
 
 trait Decoder {
   def decode(event: Event): Event
