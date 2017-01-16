@@ -50,12 +50,15 @@ dependencies {
     // Akka其他依赖
     compile 'com.typesafe.akka:akka-http_2.11:10.0.1'
     compile 'com.typesafe.akka:akka-http-spray-json_2.11:10.0.1'
-    compile 'com.typesafe.akka:akka-stream-kafka_2.11:0.13'
+//    compile 'com.typesafe.akka:akka-stream-kafka_2.11:0.13'
     compile 'org.apache.bahir:spark-streaming-akka_2.11:2.0.1'
 
     // ES相关依赖
     compile 'org.elasticsearch.client:transport:5.1.1'
     compile 'io.thekraken:grok:0.1.5'
+    
+    // Kafka客户端
+    compile 'org.apache.kafka:kafka-clients:0.10.1.1'
 
     // 其他Utils依赖
     compile 'org.apache.commons:commons-lang3:3.5'
