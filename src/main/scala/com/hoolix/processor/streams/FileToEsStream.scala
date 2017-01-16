@@ -1,8 +1,9 @@
 package com.hoolix.processor.streams
 
+import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.directives.FileInfo
-import akka.stream.scaladsl.{RunnableGraph, Source}
+import akka.stream.scaladsl.{Keep, RunnableGraph, Source}
 import akka.util.ByteString
 import com.hoolix.processor.decoders.RawLineDecoder
 import com.hoolix.processor.filters.loaders.ConfigLoader
@@ -14,7 +15,8 @@ import com.hoolix.processor.sources.ByteStringToEsSource
 import com.typesafe.config.Config
 import org.elasticsearch.client.transport.TransportClient
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 /**
   * Hoolix 2017
@@ -29,9 +31,10 @@ object FileToEsStream {
              byteStringSource: Source[ByteString, Any],
              indexAlias: String,
              logType: String,
-             tag: String
+             tag: String,
+             onComplete: (Try[Done]) => Unit
            )(implicit config: Config, system: ActorSystem, ec: ExecutionContext): FileToEsStream =
-    new FileToEsStream(parallelism, esClient, fileInfo, byteStringSource, indexAlias, logType, tag, config, system, ec)
+    new FileToEsStream(parallelism, esClient, fileInfo, byteStringSource, indexAlias, logType, tag, onComplete, config, system, ec)
 
   class FileToEsStream(
                          parallelism: Int,
@@ -41,6 +44,7 @@ object FileToEsStream {
                          indexAlias: String,
                          logType: String,
                          tag: String,
+                         onComplete: (Try[Done]) => Unit,
                          implicit val config: Config,
                          implicit val system: ActorSystem,
                          implicit val ec: ExecutionContext
@@ -53,7 +57,7 @@ object FileToEsStream {
     val esBulkRequestSink = ElasticsearchBulkRequestSink[FileSourceMetadata](esClient, parallelism)(config, futureExecutionContext)
     val esSink = esBulkRequestSink
 
-    def stream: RunnableGraph[Any] = {
+    def stream: RunnableGraph[Future[Done]] = {
 
       val decodeFlow = DecodeFlow[FileSourceMetadata, ElasticsearchPortFactory](parallelism, RawLineDecoder(indexAlias, logType, Seq(tag), "file")).flow
       val apache_access = ConfigLoader.build_from_local("conf/pipeline/apache_access.yml")
@@ -85,11 +89,11 @@ object FileToEsStream {
         ElasticsearchClient.esIndexCreationSettings()
       ).flow(futureExecutionContext)
 
-      fileSource
-        .via(decodeFlow)
-        .via(filterFlow)
-        .via(createIndexFlow)
-        .to(esSink.sink)
+      fileSource.named("file-to-es-source")
+        .viaMat(decodeFlow)(Keep.left).named("file-to-es-decode-flow")
+        .viaMat(filterFlow)(Keep.left).named("file-to-es-filter-flow")
+        .viaMat(createIndexFlow)(Keep.left).named("file-to-es-index-flow")
+        .toMat(esSink.sink(onComplete))(Keep.right).named("file-to-es-sink")
     }
   }
 }

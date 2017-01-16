@@ -23,7 +23,11 @@ object StreamControlRoutes {
       val stream = KafkaToEsStream(
         parallelism,
         esClient,
-        kafkaTopic
+        kafkaTopic,
+        { _ =>
+          println("done, shutting down now")
+          KafkaToEsStream.shutdownStream(kafkaTopic)
+        }
       )
       stream.run()
       complete(s"pipeline $kafkaTopic started")

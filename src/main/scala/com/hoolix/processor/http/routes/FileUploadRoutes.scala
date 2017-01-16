@@ -3,7 +3,6 @@ package com.hoolix.processor.http.routes
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.stream.Materializer
 import com.hoolix.processor.streams.FileToEsStream
 import com.typesafe.config.Config
 import org.elasticsearch.client.transport.TransportClient
@@ -25,17 +24,22 @@ object FileUploadRoutes {
           fileUpload("file") {
 
             case (fileInfo, byteStringSource) =>
-              FileToEsStream(
+
+              val done = FileToEsStream(
                 parallelism = 1,
                 esClient,
                 fileInfo,
                 byteStringSource,
                 indexAlias.toString,
                 logType,
-                tag
+                tag,
+                { _ => println("done") }
               ).stream.run()
 
-              complete(s"$indexAlias, $logType, $tag")
+              onComplete(done) { _ =>
+                complete(s"$indexAlias, $logType, $tag")
+              }
+
           }
         }
       }
