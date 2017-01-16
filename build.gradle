@@ -72,6 +72,9 @@ dependencies {
     compile "eu.bitwalker:UserAgentUtils:1.20"
     //TODO: explicitly add jackson
 
+    compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.7'
+
+//    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.22'
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.7'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.7'
     compile group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: '2.7'

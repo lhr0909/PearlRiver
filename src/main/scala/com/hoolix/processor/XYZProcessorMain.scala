@@ -11,7 +11,9 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.hoolix.processor.http.routes.{OfflineQueryRoutes, StreamControlRoutes}
 import com.hoolix.processor.modules.ElasticsearchClient
 import com.typesafe.config.ConfigFactory
-import org.slf4j.LoggerFactory
+
+import akka.event.Logging
+//import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -22,10 +24,13 @@ import scala.concurrent.duration._
   * Created by simon on 12/29/16.
   */
 object XYZProcessorMain extends App {
-  val logger = LoggerFactory.getLogger(this.getClass)
+//  val logger = LoggerFactory.getLogger(this.getClass)
 
   override def main(args: Array[String]): Unit = {
     implicit val config = ConfigFactory.parseFile(new File("conf/application.conf"))
+
+    implicit val system = ActorSystem("xyz-processor", config)
+    val logger = Logging.getLogger(system, this)
 
     val decider: Supervision.Decider = { e =>
       logger.error("Unhandled exception in stream", e)
@@ -33,7 +38,6 @@ object XYZProcessorMain extends App {
       Supervision.Stop
     }
 
-    implicit val system = ActorSystem("xyz-processor", config)
     val materializerSettings = ActorMaterializerSettings(system).withSupervisionStrategy(decider)
     implicit val materializer = ActorMaterializer(materializerSettings)(system)
 
@@ -52,7 +56,8 @@ object XYZProcessorMain extends App {
     val httpBind = Http().bindAndHandle(route, bindAddress, bindPort)
 
     httpBind.onComplete { _ =>
-      println(s"HTTP Server started at $bindAddress:$bindPort !")
+//      println(s"HTTP Server started at $bindAddress:$bindPort !")
+      logger.info(s"HTTP Server started at $bindAddress:$bindPort !")
     }
 
     //TODO: improve logging (use log4j2)
