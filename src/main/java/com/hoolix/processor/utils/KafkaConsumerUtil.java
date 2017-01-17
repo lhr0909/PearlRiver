@@ -3,6 +3,7 @@ package com.hoolix.processor.utils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValue;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
@@ -17,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Hoolix 2017
  * Created by simon on 1/16/17.
  */
+@Slf4j
 public class KafkaConsumerUtil {
     private static Map<Set<String>, KafkaConsumer<String, String>> sharedConsumerInstanceMap = new ConcurrentHashMap<>();
 
@@ -41,6 +43,17 @@ public class KafkaConsumerUtil {
         }
 
         return sharedConsumerInstanceMap.get(frozenTopics);
+    }
+
+    public static void closeConsumer(Set<String> topics) {
+        Set<String> frozenTopics = Collections.unmodifiableSet(topics);
+
+        if (sharedConsumerInstanceMap.containsKey(frozenTopics)) {
+            sharedConsumerInstanceMap.get(frozenTopics).close();
+            sharedConsumerInstanceMap.remove(frozenTopics);
+        } else {
+            log.warn("could not find consumer for topics " + frozenTopics.toString());
+        }
     }
 
     private static void readConfig() {
