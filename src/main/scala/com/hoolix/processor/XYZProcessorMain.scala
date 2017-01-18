@@ -8,10 +8,9 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
-import com.hoolix.processor.http.routes.{FileUploadRoutes, OfflineQueryRoutes, StreamControlRoutes}
+import com.hoolix.processor.http.routes.{FileUploadRoutes, OfflineQueryRoutes, PreviewRoutes, StreamControlRoutes}
 import com.hoolix.processor.modules.ElasticsearchClient
 import com.typesafe.config.ConfigFactory
-
 import akka.event.Logging
 //import org.slf4j.LoggerFactory
 //import kamon.Kamon
@@ -52,7 +51,7 @@ object XYZProcessorMain extends App {
 
     val route: Route = pathSingleSlash {
       complete("后端程序还活着！")
-    } ~ OfflineQueryRoutes() ~ StreamControlRoutes(esClient) ~ FileUploadRoutes(esClient)
+    } ~ OfflineQueryRoutes() ~ StreamControlRoutes(esClient) ~ FileUploadRoutes(esClient) ~ PreviewRoutes()
 
     val bindAddress = httpConfig.getString("bind-address")
     val bindPort = httpConfig.getInt("bind-port")

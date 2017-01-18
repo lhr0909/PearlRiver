@@ -9,12 +9,3 @@ case class DummySourceMetadata() extends SourceMetadata {
   override val offset: OffsetT = None
   override def id: String = ???
 }
-
-
-//case class FileSourceMetadata(fileOffset: FileOffset) extends SourceMetadata {
-//  type OffsetT = FileOffset
-//
-//  override val offset: OffsetT = fileOffset
-//
-//  override def id: String = s"${ offset.fileName }.${ offset.offset }"
-//}

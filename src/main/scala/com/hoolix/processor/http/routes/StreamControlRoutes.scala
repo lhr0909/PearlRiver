@@ -17,9 +17,7 @@ import com.hoolix.processor.models.events.Event
 
 import scala.concurrent.ExecutionContext
 import com.hoolix.processor.streams.PreviewStream
-import spray.json.JsValue
-import spray.json.DefaultJsonProtocol._
-import spray.json._
+
 
 import scala.util.{Failure, Success}
 
@@ -52,57 +50,6 @@ object StreamControlRoutes {
       println(s"Shutting down Kafka Source now... - " + Instant.now)
       KafkaToEsStream.shutdownStream(kafkaTopic)
       complete(s"pipeline $kafkaTopic stopped")
-    } ~
-    path("preview") {
-      post {
-        entity(as[JsValue]) { jsonObj =>
-          val json = jsonObj.toString
-          println(json)
-//          println("will not print this")
-          val sample = (parse(json) \ "records").extract[Seq[String]]
-          val `type` = (parse(json) \ "message_type").extract[String]
-          val token = "*" // TODO parse header http://doc.akka.io/docs/akka-http/current/scala/http/common/http-model.html#header-model
-//          val configsString: String = jsonObj.asJsObject.fields("configs").convertTo[String]
-          val configsString: String = jsonObj.asJsObject.fields("configs").toString()
-//          println(configsString)
-          val configs = ConfigLoader.parse_from_json(configsString)
-//          val configs = ConfigLoader.parse_from_json((parse(json) \ "configs").extract[String])
-          val filters = ConfigLoader.build_filter(configs)("*")("*")
-          val parallelism = 20
-
-
-          val stream = new PreviewStream(sample, token, `type`, filters, parallelism, config, system, ec)
-          var events = List[Event]()
-          val future = stream.stream.runForeach((shipper) => events = events.::(shipper.event))
-          // TODO 整理输出的格式
-//          onSuccess(future) {
-//            complete(events.toString())
-//          }
-//          future.onComplete({
-//            case Success(result) => {
-//              println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" + events)
-//            }
-//            case Failure(e) => {
-//              e.printStackTrace()
-//            }
-//
-//          })
-
-          onComplete(future) {
-            case Success(result) => {
-              println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" + events)
-              complete(events.toString())
-            }
-            case Failure(e) => {
-              e.printStackTrace()
-              complete(e)
-            }
-          }
-////          stream.run()
-////          stream.
-//          complete(events.toString())
-        }
-      }
     }
   }
 }
