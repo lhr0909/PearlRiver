@@ -1,14 +1,9 @@
 package com.hoolix.processor.sources
-import akka.actor.ActorSystem
-import akka.kafka.ConsumerMessage.CommittableMessage
-import akka.kafka.Subscriptions
-import akka.kafka.scaladsl.Consumer
-import akka.kafka.scaladsl.Consumer.Control
+import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.hoolix.processor.models._
 import com.hoolix.processor.models.events.FileBeatEvent
-import com.hoolix.processor.modules.KafkaConsumerSettings
-import com.typesafe.config.Config
+import org.apache.kafka.clients.consumer.ConsumerRecord
 
 import scala.concurrent.Future
 
@@ -16,30 +11,22 @@ import scala.concurrent.Future
   * Hoolix 2017
   * Created by simon on 1/14/17.
   */
-case class KafkaToEsSource(
-                            parallel: Int,
-                            kafkaTopic: String,
-                            implicit val config: Config,
-                            implicit val system: ActorSystem
-                          )
-  extends AbstractSource[KafkaSourceMetadata, ElasticsearchPortFactory] {
+case class KafkaToEsSource(parallel: Int, reactiveKafkaSource: ReactiveKafkaSource) extends AbstractSource[KafkaSourceMetadata, ElasticsearchPortFactory] {
 
-  override type S = CommittableMessage[Array[Byte], String]
-  override type Mat = Control
+  override type S = ConsumerRecord[String, String]
+  override type Mat = NotUsed
 
   override val sourceType: String = "kafka"
 
   override val parallelism: Int = parallel
 
-  //FIXME: rolling back to single topic per stream for now, need more fine-grained control
-  override val startingSource: Source[CommittableMessage[Array[Byte], String], Control] =
-    Consumer.committableSource(KafkaConsumerSettings(), Subscriptions.topics(Set(kafkaTopic)))
+  override val startingSource: Source[ConsumerRecord[String, String], NotUsed] = Source.fromGraph(reactiveKafkaSource)
 
-  override def convertToShipper(incoming: CommittableMessage[Array[Byte], String]): Future[Shipper[KafkaSourceMetadata, ElasticsearchPortFactory]] = {
+  override def convertToShipper(incoming: ConsumerRecord[String, String]): Future[Shipper[KafkaSourceMetadata, ElasticsearchPortFactory]] = {
     Future.successful(
       Shipper(
-        FileBeatEvent.fromJsonString(incoming.record.value),
-        KafkaSourceMetadata(incoming.committableOffset),
+        FileBeatEvent.fromJsonString(incoming.value()),
+        KafkaSourceMetadata(incoming),
         ElasticsearchPortFactory()
       )
     )

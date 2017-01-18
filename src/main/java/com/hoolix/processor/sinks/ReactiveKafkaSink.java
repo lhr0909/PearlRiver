@@ -1,15 +1,20 @@
 package com.hoolix.processor.sinks;
 
+import akka.Done;
+import akka.dispatch.Futures;
 import akka.stream.Attributes;
 import akka.stream.Inlet;
 import akka.stream.SinkShape;
 import akka.stream.stage.AbstractInHandler;
-import akka.stream.stage.GraphStage;
 import akka.stream.stage.GraphStageLogic;
+import akka.stream.stage.GraphStageWithMaterializedValue;
 import com.hoolix.processor.utils.KafkaConsumerUtil;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
+import scala.Tuple2;
+import scala.concurrent.Future;
+import scala.concurrent.Promise;
 
 import java.util.Map;
 import java.util.Set;
@@ -18,7 +23,7 @@ import java.util.Set;
  * Hoolix 2017
  * Created by simon on 1/17/17.
  */
-public class ReactiveKafkaSink extends GraphStage<SinkShape<Map<TopicPartition, OffsetAndMetadata>>> {
+public class ReactiveKafkaSink extends GraphStageWithMaterializedValue<SinkShape<Map<TopicPartition, OffsetAndMetadata>>, Future<Done>> {
     public final Inlet<Map<TopicPartition, OffsetAndMetadata>> in = Inlet.create("KafkaOffsetIn");
     private final SinkShape<Map<TopicPartition, OffsetAndMetadata>> shape = SinkShape.of(in);
 
@@ -34,8 +39,10 @@ public class ReactiveKafkaSink extends GraphStage<SinkShape<Map<TopicPartition, 
     }
 
     @Override
-    public GraphStageLogic createLogic(Attributes inheritedAttributes) throws Exception {
-        return new GraphStageLogic(shape()) {
+    public Tuple2<GraphStageLogic, Future<Done>> createLogicAndMaterializedValue(Attributes inheritedAttributes) throws Exception {
+        Promise<Done> promise = Futures.promise();
+
+        GraphStageLogic graphStageLogic = new GraphStageLogic(shape()) {
 
             private final KafkaConsumer<String, String> kafkaConsumer = KafkaConsumerUtil.getInstance(kafkaTopics);
 
@@ -61,10 +68,13 @@ public class ReactiveKafkaSink extends GraphStage<SinkShape<Map<TopicPartition, 
                     @Override
                     public void onUpstreamFinish() throws Exception {
                         KafkaConsumerUtil.closeConsumer(kafkaTopics);
+                        promise.success(Done.getInstance());
                         super.onUpstreamFinish();
                     }
                 });
             }
         };
+
+        return new Tuple2<>(graphStageLogic, promise.future());
     }
 }

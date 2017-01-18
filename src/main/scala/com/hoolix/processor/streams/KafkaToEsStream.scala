@@ -1,23 +1,21 @@
 package com.hoolix.processor.streams
 
-import akka.Done
+import akka.{Done, NotUsed}
 import akka.actor.ActorSystem
-import akka.kafka.scaladsl.Consumer.Control
-import akka.stream.Materializer
+import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import akka.stream.scaladsl.{Keep, RunnableGraph}
 import com.hoolix.processor.decoders.FileBeatDecoder
 import com.hoolix.processor.filters.loaders.ConfigLoader
-import com.hoolix.processor.flows.{CreateIndexFlow, DecodeFlow, FilterFlow}
-import com.hoolix.processor.models.{ElasticsearchPortFactory, KafkaSourceMetadata}
+import com.hoolix.processor.flows.{ElasticsearchCreateIndexFlow, DecodeFlow, ElasticsearchBulkRequestFlow, FilterFlow}
+import com.hoolix.processor.models.{ElasticsearchPortFactory, KafkaSourceMetadata, Shipper}
 import com.hoolix.processor.modules.ElasticsearchClient
-import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
-import com.hoolix.processor.sources.KafkaToEsSource
+import com.hoolix.processor.sinks.ReactiveKafkaSink
+import com.hoolix.processor.sources.{KafkaToEsSource, ReactiveKafkaSource}
 import com.typesafe.config.Config
 import org.elasticsearch.client.transport.TransportClient
 
-import scala.collection.concurrent.TrieMap
-import scala.concurrent.ExecutionContext
-import scala.util.Try
+import scala.collection.JavaConversions
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Hoolix 2017
@@ -25,52 +23,37 @@ import scala.util.Try
   */
 object KafkaToEsStream {
 
-  //TODO: get stream cache into SQL
-
-  val streamCache: TrieMap[String, Control] = TrieMap()
-
   def apply(
              parallelism: Int,
              esClient: TransportClient,
-             kafkaTopic: String,
-             onComplete: (Try[Done]) => Unit
+             kafkaTopics: Set[String]
            )(implicit config: Config, system: ActorSystem, ec: ExecutionContext): KafkaToEsStream =
-    new KafkaToEsStream(parallelism, esClient, kafkaTopic, onComplete, config, system, ec)
-
-  //TODO: add a callback when it is done
-  def stopStream(kafkaTopic: String)(implicit ec: ExecutionContext): Unit = {
-    //FIXME: we are only stopping here, will need to shutdown the whole stream when it is completely done
-    streamCache(kafkaTopic).stop()
-  }
-
-  def shutdownStream(kafkaTopic: String)(implicit ec: ExecutionContext): Unit = {
-    streamCache(kafkaTopic).shutdown() onSuccess {
-      case Done =>
-        streamCache.remove(kafkaTopic)
-        println(s"stream for $kafkaTopic has shutdown and cleaned up")
-    }
-  }
+    new KafkaToEsStream(parallelism, esClient, kafkaTopics, config, system, ec)
 
   class KafkaToEsStream(
                          parallelism: Int,
                          esClient: TransportClient,
-                         kafkaTopic: String,
-                         onComplete: (Try[Done]) => Unit,
+                         kafkaTopics: Set[String],
                          implicit val config: Config,
                          implicit val system: ActorSystem,
                          implicit val ec: ExecutionContext
                        ) {
 
-    val futureExecutionContext: ExecutionContext = system.dispatchers.lookup("future-dispatcher")
+    val futureExecutionContext = system.dispatchers.lookup("future-dispatcher")
 
-    val kafkaSource = KafkaToEsSource(parallelism, kafkaTopic, config, system)
+    val topicsJavaSet = JavaConversions.setAsJavaSet(kafkaTopics)
+    val reactiveKafkaSource = new ReactiveKafkaSource(topicsJavaSet)
+    val reactiveKafkaSink = new ReactiveKafkaSink(topicsJavaSet)
 
-//    val esBulkProcessorSink = ElasticsearchBulkProcessorSink(esClient, parallelism)(config, futureExecutionContext)
-    val esBulkRequestSink = ElasticsearchBulkRequestSink[KafkaSourceMetadata](esClient, parallelism)(config, futureExecutionContext)
-    val esSink = esBulkRequestSink
-//    val esSink = esBlulkProcessorSink
+    val kafkaSource = KafkaToEsSource(parallelism, reactiveKafkaSource)
 
-    def stream: RunnableGraph[Control] = {
+    val esBulkRequestSink = ElasticsearchBulkRequestFlow[KafkaSourceMetadata](
+      esClient,
+      parallelism,
+      reactiveKafkaSink
+    )(config, futureExecutionContext)
+
+    def stream: RunnableGraph[(UniqueKillSwitch, Future[Done])] = {
 
       val decodeFlow = DecodeFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism, FileBeatDecoder()).flow
       val apache_access = ConfigLoader.build_from_local("conf/pipeline/apache_access.yml")
@@ -96,22 +79,19 @@ object KafkaToEsStream {
       println(filtersMap)
 
       val filterFlow = FilterFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism, filtersMap).flow()
-      val createIndexFlow = CreateIndexFlow[KafkaSourceMetadata](
+      val createIndexFlow = ElasticsearchCreateIndexFlow[KafkaSourceMetadata](
           parallelism,
           esClient,
           ElasticsearchClient.esIndexCreationSettings()
         ).flow(futureExecutionContext)
 
       kafkaSource.source().named("kafka-to-es-source")
+        .viaMat(KillSwitches.single[Shipper[KafkaSourceMetadata, ElasticsearchPortFactory]])(Keep.right).named("kill-switch")
         .viaMat(decodeFlow)(Keep.left).named("kafka-to-es-decode-flow")
         .viaMat(filterFlow)(Keep.left).named("kafka-to-es-filter-flow")
         .viaMat(createIndexFlow)(Keep.left).named("kafka-to-es-index-flow")
-        .toMat(esSink.sink(onComplete))(Keep.left).named("kafka-to-es-sink")
+        .toMat(esBulkRequestSink.sink())(Keep.both).named("kafka-to-es-sink")
     }
 
-    def run()(implicit materializer: Materializer): Unit = {
-      val control = stream.run()
-      streamCache.put(kafkaTopic, control)
-    }
   }
 }

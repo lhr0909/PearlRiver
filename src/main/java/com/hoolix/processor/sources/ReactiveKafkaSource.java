@@ -52,7 +52,7 @@ public class ReactiveKafkaSource extends GraphStage<SourceShape<ConsumerRecord<S
                 setHandler(out, new AbstractOutHandler() {
                     @Override
                     public void onPull() throws Exception {
-                        if (buffer.isEmpty()) {
+                        while (buffer.isEmpty()) {
                             pollIntoBuffer();
                         }
 

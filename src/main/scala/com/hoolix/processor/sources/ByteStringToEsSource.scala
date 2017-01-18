@@ -18,10 +18,10 @@ import scala.concurrent.Future
   * Created by simon on 1/13/17.
   */
 case class ByteStringToEsSource(
-                           parallel: Int,
-                           fileName: String,
-                           incomingSource: Source[ByteString, Any]
-                           ) extends AbstractSource[FileSourceMetadata, ElasticsearchPortFactory] {
+                                 parallel: Int,
+                                 fileName: String,
+                                 incomingSource: Source[ByteString, Any]
+                               ) extends AbstractSource[FileSourceMetadata, ElasticsearchPortFactory] {
 
   override type S = (ByteString, Long)
   override type Mat = Any
@@ -35,7 +35,6 @@ case class ByteStringToEsSource(
   override val startingSource: Source[S, Any] =
     incomingSource
       .via(Framing.delimiter(ByteString("\n"), maxBytesFrame)).zipWithIndex
-
 
   override def convertToShipper(incoming: S): Future[Shipper[FileSourceMetadata, ElasticsearchPortFactory]] = {
     val (line, offset) = incoming
