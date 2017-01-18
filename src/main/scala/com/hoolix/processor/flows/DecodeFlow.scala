@@ -4,7 +4,6 @@ import akka.NotUsed
 import com.hoolix.processor.decoders.Decoder
 import akka.stream.scaladsl.Flow
 import com.hoolix.processor.models._
-
 import scala.concurrent.Future
 
 /**
@@ -14,7 +13,7 @@ case class DecodeFlow[SrcMeta <: SourceMetadata, PortFac <: PortFactory](paralle
 
   type Shipperz = Shipper[SrcMeta, PortFac]
 
-  def flow: Flow[Shipper[SrcMeta, PortFac], Shipper[SrcMeta, PortFac], NotUsed] = {
+  def flow: Flow[Shipperz, Shipperz, NotUsed] = {
     Flow[Shipperz].mapAsync(parallelism)((shipper: Shipperz) => {
       Future.successful(
         Shipper(

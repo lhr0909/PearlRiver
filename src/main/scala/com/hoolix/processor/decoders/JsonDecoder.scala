@@ -1,21 +1,10 @@
-//package com.hoolix.pipeline.decoder
+//package com.hoolix.processor.decoders
 //
-//import com.hoolix.pipeline.filter.DateFilter
-//import com.hoolix.pipeline.core.{Context, Decoder, MetricTypes}
+//
 //import org.joda.time.DateTime
 //import org.json4s.DefaultFormats
 //import org.json4s.jackson.JsonMethods._
 //import org.slf4j.LoggerFactory
-//
-////object JsonDecoder {
-////  val meta_type = "type"
-////  val meta_tag  = "tag"
-////  val meta_token= "token"
-////  val meta_host= "host"
-////  val meta_message= "message"
-////  val meta_timestamp= "@timestamp"
-////  val meta_version= "@version"
-////}
 //
 //case class JsonDecoder() extends Decoder {
 //  lazy val logger = LoggerFactory.getLogger(this.getClass)

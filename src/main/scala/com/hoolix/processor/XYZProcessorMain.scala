@@ -8,10 +8,12 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
-import com.hoolix.processor.http.routes.{FileUploadRoutes, OfflineQueryRoutes, StreamControlRoutes}
+import com.hoolix.processor.http.routes.{FileUploadRoutes, OfflineQueryRoutes, PreviewRoutes, StreamControlRoutes}
 import com.hoolix.processor.modules.ElasticsearchClient
 import com.typesafe.config.ConfigFactory
-import kamon.Kamon
+import akka.event.Logging
+//import org.slf4j.LoggerFactory
+//import kamon.Kamon
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
@@ -23,11 +25,13 @@ import scala.concurrent.duration._
   * Created by simon on 12/29/16.
   */
 object XYZProcessorMain extends App {
-  val logger = LoggerFactory.getLogger(this.getClass)
+//  val logger = LoggerFactory.getLogger(this.getClass)
 
   override def main(args: Array[String]): Unit = {
     implicit val config = ConfigFactory.parseFile(new File("conf/application.conf"))
 
+    implicit val system = ActorSystem("xyz-processor", config)
+    val logger = Logging.getLogger(system, this)
 //    Kamon.start(config.withFallback(ConfigFactory.defaultReference()))
 
     val decider: Supervision.Decider = { e =>
@@ -36,7 +40,6 @@ object XYZProcessorMain extends App {
       Supervision.Stop
     }
 
-    implicit val system = ActorSystem("xyz-processor", config)
     val materializerSettings = ActorMaterializerSettings(system).withSupervisionStrategy(decider)
     implicit val materializer = ActorMaterializer(materializerSettings, namePrefix = "xyz-streams")
 
@@ -48,14 +51,15 @@ object XYZProcessorMain extends App {
 
     val route: Route = pathSingleSlash {
       complete("后端程序还活着！")
-    } ~ OfflineQueryRoutes() ~ StreamControlRoutes(esClient) ~ FileUploadRoutes(esClient)
+    } ~ OfflineQueryRoutes() ~ StreamControlRoutes(esClient) ~ FileUploadRoutes(esClient) ~ PreviewRoutes()
 
     val bindAddress = httpConfig.getString("bind-address")
     val bindPort = httpConfig.getInt("bind-port")
     val httpBind = Http().bindAndHandle(route, bindAddress, bindPort)
 
     httpBind.onComplete { _ =>
-      println(s"HTTP Server started at $bindAddress:$bindPort !")
+//      println(s"HTTP Server started at $bindAddress:$bindPort !")
+      logger.info(s"HTTP Server started at $bindAddress:$bindPort !")
     }
 
     //TODO: improve logging (use log4j2)

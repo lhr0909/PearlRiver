@@ -1,6 +1,4 @@
-//package com.hoolix.pipeline.filter
-//
-//import com.hoolix.pipeline.core.{Context, ContextMark, Filter, FilterConfig}
+//package com.hoolix.processor.filters
 //
 //case class MutateFilter(cfg:FilterConfig, var cmd_configs: Seq[(String,Seq[Any])] = Seq()) extends Filter{
 //  /**
@@ -138,11 +136,11 @@
 //
 //                  val (zone, field) = from_field.toSeq(0);
 //
-//                  (ctx:Context) => {
-//                    val new_value = ctx.get((zone, field), null)
-//                    val old_value = ctx.get((cfg.pool, field_name))
-//                    if (new_value != null && old_value.isDefined)
-//                      ctx.put((cfg.pool, field_name), old_value.get.replaceAll(pattern, new_value))
+//                      (ctx:Context) => {
+//                        val new_value = ctx.get((zone, field), null)
+//                        val old_value = ctx.get((cfg.pool, field_name))
+//                        if (new_value != null && old_value.isDefined)
+//                          ctx.put((cfg.pool, field_name), old_value.get.replaceAll(pattern, new_value))
 //                  }
 //              }
 //            }
