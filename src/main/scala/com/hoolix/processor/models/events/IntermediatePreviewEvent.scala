@@ -1,4 +1,5 @@
-package com.hoolix.processor.models
+package com.hoolix.processor.models.events
+
 import org.elasticsearch.action.index.IndexRequest
 
 /**

@@ -2,8 +2,7 @@ package com.hoolix.processor.filters
 
 import java.util.regex.Pattern
 
-import com.hoolix.processor.models.events.{Event, IntermediateEvent}
-import com.hoolix.processor.models.IntermediatePreviewEvent
+import com.hoolix.processor.models.events.{Event, IntermediateEvent, IntermediatePreviewEvent}
 import com.hoolix.processor.utils.Utils
 
 import scala.collection.mutable

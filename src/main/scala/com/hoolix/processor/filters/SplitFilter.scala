@@ -1,7 +1,6 @@
 package com.hoolix.processor.filters
 
-import com.hoolix.processor.models.IntermediatePreviewEvent
-import com.hoolix.processor.models.events.{Event, IntermediateEvent}
+import com.hoolix.processor.models.events.{Event, IntermediateEvent, IntermediatePreviewEvent}
 import com.hoolix.processor.utils.Utils.{deepGet, deepPut, split_with_position}
 
 case class SplitFilter(targetField: String, delimiter: String, limit: Int = -1, names: Seq[String] = Seq()) extends Filter {
