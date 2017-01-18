@@ -1,6 +1,7 @@
 package com.hoolix.processor.models
 
-import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.clients.consumer.{ConsumerRecord, OffsetAndMetadata}
+import org.apache.kafka.common.TopicPartition
 
 /**
   * Hoolix 2017
@@ -12,10 +13,9 @@ case class KafkaSourceMetadata(consumerRecord: ConsumerRecord[String, String]) e
 
   override val offset: OffsetT = consumerRecord
 
-  def topic: String = offset.topic()
-  def partition: Int = offset.partition()
-  def partitionOffset: Long = offset.offset()
+  lazy val topicPartition: TopicPartition = new TopicPartition(offset.topic(), offset.partition())
+  def offsetAndMetadata(metadata: String): OffsetAndMetadata = new OffsetAndMetadata(offset.offset(), metadata)
 
-  override def id: String = s"$topic.$partition.$partitionOffset"
+  override def id: String = s"${offset.topic()}.${offset.partition()}.${offset.offset()}"
 
 }
