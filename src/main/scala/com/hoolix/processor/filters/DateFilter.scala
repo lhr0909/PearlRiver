@@ -1,7 +1,6 @@
 package com.hoolix.processor.filters
 
 import java.util.Locale
-
 import com.hoolix.processor.models.events.{Event, IntermediateEvent}
 import com.hoolix.processor.filters.DateFilter.DateTimeFormatterSetting
 import org.joda.time.chrono.ISOChronology
@@ -67,7 +66,9 @@ case class DateFilter(
         parsedTimestamp = Some(DateTime.now.getMillis)
     }
     parsedTimestamp match {
-      case Some(value: Long) => payload.put("event_timestamp", value)
+      case Some(value: Long) =>
+        payload.put("event_timestamp", value)
+        payload.remove(targetField)
       case None =>
     }
     IntermediateEvent(payload)

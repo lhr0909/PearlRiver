@@ -13,6 +13,7 @@ import org.elasticsearch.client.transport.TransportClient
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import com.hoolix.processor.models.events.Event
 
 import scala.concurrent.ExecutionContext
 import com.hoolix.processor.streams.PreviewStream
@@ -33,7 +34,11 @@ object StreamControlRoutes {
       val stream = KafkaToEsStream(
         parallelism,
         esClient,
-        kafkaTopic
+        kafkaTopic,
+        { _ =>
+          println("done, shutting down now")
+          KafkaToEsStream.shutdownStream(kafkaTopic)
+        }
       )
       stream.run()
       complete(s"pipeline $kafkaTopic started")
@@ -68,7 +73,7 @@ object StreamControlRoutes {
 
           val stream = new PreviewStream(sample, token, `type`, filters, parallelism, config, system, ec)
           var events = List[Event]()
-          val future = stream.stream.runForeach((event) => events = events.::(event))
+          val future = stream.stream.runForeach((shipper) => events = events.::(shipper.event))
           // TODO 整理输出的格式
 //          onSuccess(future) {
 //            complete(events.toString())

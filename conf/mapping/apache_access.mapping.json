@@ -8,6 +8,9 @@
     "token": {
       "type": "keyword"
     },
+    "type": {
+      "type": "keyword"
+    },
     "tags": {
       "type": "keyword"
     },
@@ -16,6 +19,14 @@
     },
     "upload_timestamp": {
       "type": "date"
+    },
+    "message": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
     },
     "clientip": {
       "type": "ip"
@@ -81,6 +92,7 @@
       }
     },
     "request_params_map": {
+      "dynamic": true,
       "type": "object"
     },
     "httpversion": {
@@ -109,6 +121,22 @@
       }
     },
     "agent": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "agent_os": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "agent_browser": {
       "type": "text",
       "fields": {
         "raw": {

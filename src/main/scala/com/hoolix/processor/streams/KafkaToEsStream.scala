@@ -16,6 +16,7 @@ import org.elasticsearch.client.transport.TransportClient
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 /**
   * Hoolix 2017
@@ -30,9 +31,10 @@ object KafkaToEsStream {
   def apply(
              parallelism: Int,
              esClient: TransportClient,
-             kafkaTopic: String
+             kafkaTopic: String,
+             onComplete: (Try[Done]) => Unit
            )(implicit config: Config, system: ActorSystem, ec: ExecutionContext): KafkaToEsStream =
-    new KafkaToEsStream(parallelism, esClient, kafkaTopic, config, system, ec)
+    new KafkaToEsStream(parallelism, esClient, kafkaTopic, onComplete, config, system, ec)
 
   //TODO: add a callback when it is done
   def stopStream(kafkaTopic: String)(implicit ec: ExecutionContext): Unit = {
@@ -44,6 +46,7 @@ object KafkaToEsStream {
     streamCache(kafkaTopic).shutdown() onSuccess {
       case Done =>
         streamCache.remove(kafkaTopic)
+        println(s"stream for $kafkaTopic has shutdown and cleaned up")
     }
   }
 
@@ -51,6 +54,7 @@ object KafkaToEsStream {
                          parallelism: Int,
                          esClient: TransportClient,
                          kafkaTopic: String,
+                         onComplete: (Try[Done]) => Unit,
                          implicit val config: Config,
                          implicit val system: ActorSystem,
                          implicit val ec: ExecutionContext
@@ -68,19 +72,22 @@ object KafkaToEsStream {
     def stream: RunnableGraph[Control] = {
 
       val decodeFlow = DecodeFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism, FileBeatDecoder()).flow
-      val filterFlow = FilterFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism, filtersMap).flow()
+      val filtersLoadFlow = FiltersLoadFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism).flow
+      val filterFlow = FilterFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism).flow()
+
       val createIndexFlow = CreateIndexFlow[KafkaSourceMetadata](
         parallelism,
         esClient,
         ElasticsearchClient.esIndexCreationSettings()
       ).flow(futureExecutionContext)
 
-      kafkaSource.source()
-        .viaMat(decodeFlow)(Keep.left)
-        .viaMat(FiltersLoadFlow(parallelism))(Keep.left)
-        .viaMat(filterFlow)(Keep.left)
-        .viaMat(createIndexFlow)(Keep.left)
-        .toMat(esSink.sink)(Keep.left)
+
+      kafkaSource.source().named("kafka-to-es-source")
+        .viaMat(decodeFlow)(Keep.left).named("kafka-to-es-decode-flow")
+        .viaMat(filtersLoadFlow)(Keep.left).named("kafka-to-es-filters-load-flow")
+        .viaMat(filterFlow)(Keep.left).named("kafka-to-es-filter-flow")
+        .viaMat(createIndexFlow)(Keep.left).named("kafka-to-es-index-flow")
+        .toMat(esSink.sink(onComplete))(Keep.left).named("kafka-to-es-sink")
     }
 
     def run()(implicit materializer: Materializer): Unit = {

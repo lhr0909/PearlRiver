@@ -14,7 +14,7 @@ import com.typesafe.config.ConfigFactory
 
 import akka.event.Logging
 //import org.slf4j.LoggerFactory
-import kamon.Kamon
+//import kamon.Kamon
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
@@ -52,7 +52,7 @@ object XYZProcessorMain extends App {
 
     val route: Route = pathSingleSlash {
       complete("后端程序还活着！")
-    } ~ OfflineQueryRoutes() ~ StreamControlRoutes(esClient) ~ FileUploadRoutes()
+    } ~ OfflineQueryRoutes() ~ StreamControlRoutes(esClient) ~ FileUploadRoutes(esClient)
 
     val bindAddress = httpConfig.getString("bind-address")
     val bindPort = httpConfig.getInt("bind-port")

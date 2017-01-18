@@ -2,9 +2,9 @@ package com.hoolix.processor.sinks
 
 import java.util.concurrent.TimeUnit
 
-import akka.NotUsed
+import akka.{Done, NotUsed}
 import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
-import akka.stream.scaladsl.{Flow, Sink}
+import akka.stream.scaladsl.{Flow, Keep, Sink}
 import com.hoolix.processor.flows.ElasticsearchBulkFlow
 import com.hoolix.processor.models._
 import com.typesafe.config.Config
@@ -14,6 +14,7 @@ import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.common.unit.{ByteSizeUnit, ByteSizeValue, TimeValue}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.util.Try
 
 /**
   * Hoolix 2017
@@ -58,7 +59,7 @@ object ElasticsearchBulkRequestSink {
           new TimeValue(60, TimeUnit.SECONDS),
           "elasticsearch.bulk.timeout"
         ).getMillis
-      ))
+      )).named("es-bulk-flow")
     }
 
     def bulkListener(callback: (Any => Unit)): ActionListener[BulkResponse] = new ActionListener[BulkResponse] {
@@ -99,7 +100,7 @@ object ElasticsearchBulkRequestSink {
       bulkRequestPromise.future
     }
 
-    def processBulkResponse(bulkResponseAndOffsets: Option[BulkResponseAndOffsets]): Unit = {
+    def processBulkResponse(bulkResponseAndOffsets: Option[BulkResponseAndOffsets]): Future[Seq[SrcMeta]] = {
       bulkResponseAndOffsets match {
         case Some(b: BulkResponseAndOffsets) =>
           val (bulkResponse: BulkResponse, offsets: Seq[SrcMeta]) = b
@@ -107,54 +108,60 @@ object ElasticsearchBulkRequestSink {
           if (!bulkResponse.hasFailures) {
             //commit offsets directly if no failures at all
             println("bulk request has no errors, committing all offsets")
-            offsets match {
-              case kafkaOffsets: Seq[KafkaSourceMetadata] =>
-                kafkaOffsets.foldLeft(CommittableOffsetBatch.empty) { (batch, o) =>
-                  batch.updated(o.asInstanceOf[CommittableOffset])
-                }.commitScaladsl()
-              case fileOffsets: Seq[FileSourceMetadata] =>
-                println("not doing anything for fileOffsets for now")
+            var offsetBatch = CommittableOffsetBatch.empty
+            offsets foreach { o: SrcMeta =>
+              o match {
+                case ks: KafkaSourceMetadata => offsetBatch = offsetBatch.updated(ks.offset)
+                case _ =>
+              }
             }
-            return
+            offsetBatch.commitScaladsl()
+            return Future.successful(offsets)
           }
 
           // there are some errors, lets find out
           // FIXME: file upload - needs to return error messages
           var offsetBatch = CommittableOffsetBatch.empty
+          var finalSeq: Seq[SrcMeta] = Seq()
           bulkResponse.getItems.zip(offsets).foreach { z: (BulkItemResponse, SrcMeta) =>
             val (bulkItemResponse, offset) = z
             if (bulkItemResponse.isFailed) {
               //FIXME: do more detailed failure checking
               println("item " + offset + " errored with " + bulkItemResponse.getFailureMessage)
             } else {
+              finalSeq :+= offset
               offset match {
-                case k: KafkaSourceMetadata =>
-                  offsetBatch = offsetBatch.updated(k.offset)
-                case _ => return
+                case k: KafkaSourceMetadata => offsetBatch = offsetBatch.updated(k.offset)
+                case _ =>
               }
             }
           }
           offsetBatch.commitScaladsl()
+          Future.successful(finalSeq)
 
-        case _ => return
+        case _ => Future.successful(Seq())
       }
     }
 
-    def sink: Sink[Shipperz, NotUsed] = {
+    def sink(onComplete: (Try[Done]) => Unit): Sink[Shipperz, Future[Done]] = {
       if (concurrentRequests < 1) {
         val flow = bulkFlow
           .filter(_.isDefined)
-          .mapAsync[Option[BulkResponseAndOffsets]](1)(makeBulkRequest)
+          .mapAsync[Option[BulkResponseAndOffsets]](1)(makeBulkRequest).named("make-bulk-request-mapAsync-single")
           .filter(_.isDefined)
+          .mapAsync[Seq[SrcMeta]](1)(processBulkResponse).named("process-bulk-response-mapAsync-single")
+          .watchTermination()(Keep.right)
 
-        flow.to(Sink.foreach(processBulkResponse)).named("es-bulk-request-sink-single")
+        flow.toMat(Sink.onComplete(onComplete))(Keep.left).named("es-bulk-request-sink-single")
       } else {
         val flow = bulkFlow
           .filter(_.isDefined)
-          .mapAsync[Option[BulkResponseAndOffsets]](concurrentRequests)(makeBulkRequest)
+          .mapAsync[Option[BulkResponseAndOffsets]](concurrentRequests)(makeBulkRequest).named("make-bulk-request-mapAsync-parallel")
           .filter(_.isDefined)
+          .mapAsync[Seq[SrcMeta]](concurrentRequests)(processBulkResponse).named("process-bulk-response-mapAsync-parallel")
+          .watchTermination()(Keep.right)
 
-        flow.to(Sink.foreachParallel(concurrentRequests)(processBulkResponse)).named("es-bulk-request-sink-parallel")
+        flow.toMat(Sink.onComplete(onComplete))(Keep.left).named("es-bulk-request-sink-parallel")
       }
     }
   }
