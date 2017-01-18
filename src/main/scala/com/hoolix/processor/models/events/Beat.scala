@@ -1,4 +1,4 @@
-package com.hoolix.processor.models
+package com.hoolix.processor.models.events
 
 /**
   * Created by peiyuchao on 2017/1/5.

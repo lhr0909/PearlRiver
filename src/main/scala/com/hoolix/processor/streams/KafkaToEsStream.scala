@@ -6,16 +6,17 @@ import akka.kafka.scaladsl.Consumer.Control
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Keep, RunnableGraph}
 import com.hoolix.processor.decoders.FileBeatDecoder
-import com.hoolix.processor.filters.loaders.ConfigLoader
-import com.hoolix.processor.flows.{CreateIndexFlow, DecodeFlow, FilterFlow}
+import com.hoolix.processor.models.{ElasticsearchPortFactory, KafkaSourceMetadata}
+import com.hoolix.processor.flows.{CreateIndexFlow, DecodeFlow, FilterFlow, FiltersLoadFlow}
 import com.hoolix.processor.modules.ElasticsearchClient
-import com.hoolix.processor.sinks.{ElasticsearchBulkProcessorSink, ElasticsearchBulkRequestSink}
-import com.hoolix.processor.sources.KafkaSource
+import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
+import com.hoolix.processor.sources.KafkaToEsSource
 import com.typesafe.config.Config
 import org.elasticsearch.client.transport.TransportClient
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 /**
   * Hoolix 2017
@@ -30,9 +31,10 @@ object KafkaToEsStream {
   def apply(
              parallelism: Int,
              esClient: TransportClient,
-             kafkaTopic: String
+             kafkaTopic: String,
+             onComplete: (Try[Done]) => Unit
            )(implicit config: Config, system: ActorSystem, ec: ExecutionContext): KafkaToEsStream =
-    new KafkaToEsStream(parallelism, esClient, kafkaTopic, config, system, ec)
+    new KafkaToEsStream(parallelism, esClient, kafkaTopic, onComplete, config, system, ec)
 
   //TODO: add a callback when it is done
   def stopStream(kafkaTopic: String)(implicit ec: ExecutionContext): Unit = {
@@ -44,6 +46,7 @@ object KafkaToEsStream {
     streamCache(kafkaTopic).shutdown() onSuccess {
       case Done =>
         streamCache.remove(kafkaTopic)
+        println(s"stream for $kafkaTopic has shutdown and cleaned up")
     }
   }
 
@@ -51,6 +54,7 @@ object KafkaToEsStream {
                          parallelism: Int,
                          esClient: TransportClient,
                          kafkaTopic: String,
+                         onComplete: (Try[Done]) => Unit,
                          implicit val config: Config,
                          implicit val system: ActorSystem,
                          implicit val ec: ExecutionContext
@@ -58,50 +62,32 @@ object KafkaToEsStream {
 
     val futureExecutionContext: ExecutionContext = system.dispatchers.lookup("future-dispatcher")
 
-    val kafkaSource = KafkaSource(parallelism, kafkaTopic)
+    val kafkaSource = KafkaToEsSource(parallelism, kafkaTopic, config, system)
 
-    val esBulkProcessorSink = ElasticsearchBulkProcessorSink(esClient, parallelism)(config, futureExecutionContext)
-    val esBulkRequestSink = ElasticsearchBulkRequestSink(esClient, parallelism)(config, futureExecutionContext)
+//    val esBulkProcessorSink = ElasticsearchBulkProcessorSink(esClient, parallelism)(config, futureExecutionContext)
+    val esBulkRequestSink = ElasticsearchBulkRequestSink[KafkaSourceMetadata](esClient, parallelism)(config, futureExecutionContext)
     val esSink = esBulkRequestSink
 //    val esSink = esBlulkProcessorSink
 
     def stream: RunnableGraph[Control] = {
 
-      val decodeFlow = DecodeFlow(parallelism, FileBeatDecoder())
-      val apache_access = ConfigLoader.build_from_local("conf/pipeline/apache_access.yml")
-      val apache_error = ConfigLoader.build_from_local("conf/pipeline/apache_error.yml")
-      val nginx_access = ConfigLoader.build_from_local("conf/pipeline/nginx_access.yml")
-      val nginx_error = ConfigLoader.build_from_local("conf/pipeline/nginx_error.yml")
-      val mysql_error = ConfigLoader.build_from_local("conf/pipeline/mysql_error.yml")
-      println(apache_access)
-      println(apache_error)
-      println(nginx_access)
-      println(nginx_error)
-      println(mysql_error)
-      val filtersMap = Map(
-        "*" -> Map(
-          "apache_access" -> apache_access("*")("*"),
-          "apache_error" -> apache_error("*")("*"),
-          "nginx_access" -> nginx_access("*")("*"),
-          "nginx_error" -> nginx_error("*")("*"),
-          "mysql_error" -> mysql_error("*")("*")
-        )
-      )
+      val decodeFlow = DecodeFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism, FileBeatDecoder()).flow
+      val filtersLoadFlow = FiltersLoadFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism).flow
+      val filterFlow = FilterFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism).flow()
 
-      println(filtersMap)
+      val createIndexFlow = CreateIndexFlow[KafkaSourceMetadata](
+        parallelism,
+        esClient,
+        ElasticsearchClient.esIndexCreationSettings()
+      ).flow(futureExecutionContext)
 
-      val filterFlow = FilterFlow(parallelism, filtersMap)
-      val createIndexFlow = CreateIndexFlow(
-          parallelism,
-          esClient,
-          ElasticsearchClient.esIndexCreationSettings()
-        )(futureExecutionContext)
 
-      kafkaSource
-        .viaMat(decodeFlow)(Keep.left)
-        .viaMat(filterFlow)(Keep.left)
-        .viaMat(createIndexFlow)(Keep.left)
-        .toMat(esSink.sink)(Keep.left)
+      kafkaSource.source().named("kafka-to-es-source")
+        .viaMat(decodeFlow)(Keep.left).named("kafka-to-es-decode-flow")
+        .viaMat(filtersLoadFlow)(Keep.left).named("kafka-to-es-filters-load-flow")
+        .viaMat(filterFlow)(Keep.left).named("kafka-to-es-filter-flow")
+        .viaMat(createIndexFlow)(Keep.left).named("kafka-to-es-index-flow")
+        .toMat(esSink.sink(onComplete))(Keep.left).named("kafka-to-es-sink")
     }
 
     def run()(implicit materializer: Materializer): Unit = {

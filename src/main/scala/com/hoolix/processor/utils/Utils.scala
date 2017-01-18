@@ -4,7 +4,7 @@ import java.io._
 import java.net.{URI, URL}
 import java.nio.charset.StandardCharsets
 import java.util.Properties
-
+import scala.util.{Failure, Success, Try}
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -179,4 +179,35 @@ object Utils {
     split_with_position(cdr, delimiter, offset + car.length + delimiter_match_length, level-1, buffer)
   }
 
+  @tailrec
+  def deepGet(map: collection.mutable.Map[String, Any], target: String): Option[Any] = {
+    val head = target.split("\\.").head
+    val tail = target.split("\\.").tail
+    if (tail.isEmpty)
+      map.get(head)
+    else
+      map.get(head) match {
+        case Some(value) =>
+          Try(value.asInstanceOf[collection.mutable.Map[String, Any]]) match {
+            case Success(success) => deepGet(success, tail.mkString("."))
+            case Failure(e) => None
+          }
+        case None => None
+      }
+  }
+
+  @tailrec
+  def deepPut(map: collection.mutable.Map[String, Any], target: String, value: Any): Unit = {
+    // TODO 当target存在且不为叶子节点时 不可写入
+    val head = target.split("\\.").head
+    val tail = target.split("\\.").tail
+    if (tail.isEmpty)
+      map.put(head, value)
+    else
+      deepPut(
+        map(head).asInstanceOf[collection.mutable.Map[String, Any]],
+        tail.mkString("."),
+        value
+      )
+  }
 }
