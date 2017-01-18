@@ -2,16 +2,24 @@ package com.hoolix.processor.http.routes
 
 import java.time.Instant
 
-import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
+import com.hoolix.processor.filters.loaders.ConfigLoader
 import com.hoolix.processor.streams.KafkaToEsStream
 import com.typesafe.config.Config
 import org.elasticsearch.client.transport.TransportClient
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import com.hoolix.processor.models.events.Event
 
 import scala.concurrent.ExecutionContext
+import com.hoolix.processor.streams.PreviewStream
+
+
+import scala.util.{Failure, Success}
 
 /**
   * Hoolix 2017
@@ -19,6 +27,7 @@ import scala.concurrent.ExecutionContext
   */
 object StreamControlRoutes {
   def apply(esClient: TransportClient)(implicit config: Config, system: ActorSystem, ec: ExecutionContext, mat: Materializer): Route = {
+    implicit val formats = org.json4s.DefaultFormats
     pathPrefix("start"/ IntNumber / Remaining) { (parallelism, kafkaTopic) =>
       val stream = KafkaToEsStream(
         parallelism,
@@ -40,7 +49,7 @@ object StreamControlRoutes {
     pathPrefix("shutdown" / Remaining) { kafkaTopic =>
       println(s"Shutting down Kafka Source now... - " + Instant.now)
       KafkaToEsStream.shutdownStream(kafkaTopic)
-      complete(s"pipeline $kafkaTopic shutdown")
+      complete(s"pipeline $kafkaTopic stopped")
     }
   }
 }

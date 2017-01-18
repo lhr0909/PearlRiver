@@ -1,0 +1,44 @@
+[
+  {
+    "type": "pattern",
+    "target": "message",
+    "token": "*"
+  },
+  {
+    "type": "geoip",
+    "target": "clientip",
+    "token": "*"
+  },
+  {
+    "type": "timestamp",
+    "target": "timestamp",
+    "args": {
+      "from_format": [["dd/MMM/yyyy:HH:mm:ss Z", "en", "Asia/Shanghai"]]
+    },
+    "token": "*"
+  },
+  {
+    "type": "user-agent",
+    "target": "agent",
+    "token": "*"
+  },
+  {
+    "type": "split",
+    "target": "request",
+    "args": {
+      "delimiter": "\\?",
+      "max_split": "2",
+      "names": ["request_path", "request_params"]
+    },
+    "token": "*"
+  },
+  {
+    "type": "kv",
+    "target": "request_params",
+    "args": {
+      "delimiter": "&",
+      "sub_delimiter": "="
+    },
+    "token": "*"
+  }
+]

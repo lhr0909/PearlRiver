@@ -6,7 +6,7 @@ import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import akka.stream.scaladsl.{Keep, RunnableGraph}
 import com.hoolix.processor.decoders.FileBeatDecoder
 import com.hoolix.processor.filters.loaders.ConfigLoader
-import com.hoolix.processor.flows.{ElasticsearchCreateIndexFlow, DecodeFlow, ElasticsearchBulkRequestFlow, FilterFlow}
+import com.hoolix.processor.flows._
 import com.hoolix.processor.models.{ElasticsearchPortFactory, KafkaSourceMetadata, Shipper}
 import com.hoolix.processor.modules.ElasticsearchClient
 import com.hoolix.processor.sinks.ReactiveKafkaSink
@@ -56,29 +56,9 @@ object KafkaToEsStream {
     def stream: RunnableGraph[(UniqueKillSwitch, Future[Done])] = {
 
       val decodeFlow = DecodeFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism, FileBeatDecoder()).flow
-      val apache_access = ConfigLoader.build_from_local("conf/pipeline/apache_access.yml")
-      val apache_error = ConfigLoader.build_from_local("conf/pipeline/apache_error.yml")
-      val nginx_access = ConfigLoader.build_from_local("conf/pipeline/nginx_access.yml")
-      val nginx_error = ConfigLoader.build_from_local("conf/pipeline/nginx_error.yml")
-      val mysql_error = ConfigLoader.build_from_local("conf/pipeline/mysql_error.yml")
-      println(apache_access)
-      println(apache_error)
-      println(nginx_access)
-      println(nginx_error)
-      println(mysql_error)
-      val filtersMap = Map(
-        "*" -> Map(
-          "apache_access" -> apache_access("*")("*"),
-          "apache_error" -> apache_error("*")("*"),
-          "nginx_access" -> nginx_access("*")("*"),
-          "nginx_error" -> nginx_error("*")("*"),
-          "mysql_error" -> mysql_error("*")("*")
-        )
-      )
+      val filtersLoadFlow = FiltersLoadFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism).flow
+      val filterFlow = FilterFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism).flow()
 
-      println(filtersMap)
-
-      val filterFlow = FilterFlow[KafkaSourceMetadata, ElasticsearchPortFactory](parallelism, filtersMap).flow()
       val createIndexFlow = ElasticsearchCreateIndexFlow[KafkaSourceMetadata](
           parallelism,
           esClient,
@@ -88,6 +68,7 @@ object KafkaToEsStream {
       kafkaSource.source().named("kafka-to-es-source")
         .viaMat(KillSwitches.single[Shipper[KafkaSourceMetadata, ElasticsearchPortFactory]])(Keep.right).named("kill-switch")
         .viaMat(decodeFlow)(Keep.left).named("kafka-to-es-decode-flow")
+        .viaMat(filtersLoadFlow)(Keep.left).named("kafka-to-es-filters-load-flow")
         .viaMat(filterFlow)(Keep.left).named("kafka-to-es-filter-flow")
         .viaMat(createIndexFlow)(Keep.left).named("kafka-to-es-index-flow")
         .toMat(esBulkRequestSink.sink())(Keep.both).named("kafka-to-es-sink")

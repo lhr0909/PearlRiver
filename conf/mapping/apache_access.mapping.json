@@ -1,10 +1,14 @@
 {
+  "dynamic": "strict",
   "_all": {
     "enabled": true,
     "omit_norms": true
   },
   "properties": {
     "token": {
+      "type": "keyword"
+    },
+    "type": {
       "type": "keyword"
     },
     "tags": {
@@ -16,8 +20,40 @@
     "upload_timestamp": {
       "type": "date"
     },
+    "message": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
     "clientip": {
       "type": "ip"
+    },
+    "city": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "country": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "continent": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
     },
     "ident": {
       "type": "keyword"
@@ -56,6 +92,7 @@
       }
     },
     "request_params_map": {
+      "dynamic": true,
       "type": "object"
     },
     "httpversion": {
@@ -84,6 +121,22 @@
       }
     },
     "agent": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "agent_os": {
+      "type": "text",
+      "fields": {
+        "raw": {
+          "type": "keyword"
+        }
+      }
+    },
+    "agent_browser": {
       "type": "text",
       "fields": {
         "raw": {

@@ -6,8 +6,7 @@ import akka.http.scaladsl.server.directives.FileInfo
 import akka.stream.scaladsl.{Keep, RunnableGraph, Source}
 import akka.util.ByteString
 import com.hoolix.processor.decoders.RawLineDecoder
-import com.hoolix.processor.filters.loaders.ConfigLoader
-import com.hoolix.processor.flows.{ElasticsearchCreateIndexFlow, DecodeFlow, ElasticsearchBulkRequestFlow, FilterFlow}
+import com.hoolix.processor.flows.{ElasticsearchCreateIndexFlow, ElasticsearchBulkRequestFlow, DecodeFlow, FilterFlow, FiltersLoadFlow}
 import com.hoolix.processor.models.{ElasticsearchPortFactory, FileSourceMetadata, Shipper}
 import com.hoolix.processor.modules.ElasticsearchClient
 import com.hoolix.processor.sources.ByteStringToEsSource
@@ -59,29 +58,9 @@ object FileToEsStream {
     def stream: RunnableGraph[Future[Done]] = {
 
       val decodeFlow = DecodeFlow[FileSourceMetadata, ElasticsearchPortFactory](parallelism, RawLineDecoder(indexAlias, logType, Seq(tag), "file")).flow
-      val apache_access = ConfigLoader.build_from_local("conf/pipeline/apache_access.yml")
-      val apache_error = ConfigLoader.build_from_local("conf/pipeline/apache_error.yml")
-      val nginx_access = ConfigLoader.build_from_local("conf/pipeline/nginx_access.yml")
-      val nginx_error = ConfigLoader.build_from_local("conf/pipeline/nginx_error.yml")
-      val mysql_error = ConfigLoader.build_from_local("conf/pipeline/mysql_error.yml")
-      println(apache_access)
-      println(apache_error)
-      println(nginx_access)
-      println(nginx_error)
-      println(mysql_error)
-      val filtersMap = Map(
-        "*" -> Map(
-          "apache_access" -> apache_access("*")("*"),
-          "apache_error" -> apache_error("*")("*"),
-          "nginx_access" -> nginx_access("*")("*"),
-          "nginx_error" -> nginx_error("*")("*"),
-          "mysql_error" -> mysql_error("*")("*")
-        )
-      )
+      val filtersLoadFlow = FiltersLoadFlow[FileSourceMetadata, ElasticsearchPortFactory](parallelism).flow
 
-      println(filtersMap)
-
-      val filterFlow = FilterFlow[FileSourceMetadata, ElasticsearchPortFactory](parallelism, filtersMap).flow()
+      val filterFlow = FilterFlow[FileSourceMetadata, ElasticsearchPortFactory](parallelism).flow()
       val createIndexFlow = ElasticsearchCreateIndexFlow[FileSourceMetadata](
         parallelism,
         esClient,
@@ -90,6 +69,7 @@ object FileToEsStream {
 
       fileSource.named("file-to-es-source")
         .viaMat(decodeFlow)(Keep.left).named("file-to-es-decode-flow")
+        .viaMat(filtersLoadFlow)(Keep.left).named("file-to-es-filters-load-flow")
         .viaMat(filterFlow)(Keep.left).named("file-to-es-filter-flow")
         .viaMat(createIndexFlow)(Keep.left).named("file-to-es-index-flow")
         .toMat(esSink.sink(onComplete))(Keep.right).named("file-to-es-sink")
