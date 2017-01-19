@@ -1,10 +1,10 @@
 package com.hoolix.processor.sinks
 
-import akka.Done
-import akka.stream.scaladsl.{Flow, Keep, Sink}
-import com.hoolix.processor.models.{ElasticsearchBulkRequestContainer, KafkaSourceMetadata}
 import java.util
 
+import akka.Done
+import akka.stream.scaladsl.{Flow, Keep, Sink}
+import com.hoolix.processor.models.KafkaSourceMetadata
 import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.common.TopicPartition
 

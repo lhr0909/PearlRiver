@@ -12,6 +12,9 @@
   target: timestamp
   token: "*"
 #  types: ["nginx_access"]
+  args:
+    from_format:
+      - ["dd/MMM/yyyy:HH:mm:ss Z", "en", "Asia/Shanghai"]
 
 - type: user-agent
   target: agent
