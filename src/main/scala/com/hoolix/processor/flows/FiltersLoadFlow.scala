@@ -4,8 +4,6 @@ import java.io.File
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
-import com.hoolix.processor.decoders.Decoder
-import com.hoolix.processor.filters.Filter
 import com.hoolix.processor.filters.Filter.ConditionedFilter
 import com.hoolix.processor.filters.loaders.ConfigLoader
 import com.hoolix.processor.models._
@@ -18,22 +16,22 @@ import scala.concurrent.Future
 
 object FiltersLoadFlow {
   // yaml
-  //  val directory = new File("conf/pipeline")
-  //  val filtersMap = Map(
-  //    "*" -> directory.list().map((filename) => {
-  //      println(filename)
-  //      filename.split("\\.")(0) -> ConfigLoader.build_from_local("conf/pipeline/" + filename)("*")("*")
-  //    }).toMap
-  //  )
+    lazy val directory = new File("conf/pipeline")
+    lazy val defaultFilters = Map(
+      "*" -> directory.list().map((filename) => {
+        println(filename)
+        filename.split("\\.")(0) -> ConfigLoader.build_from_local("conf/pipeline/" + filename)("*")("*")
+      }).toMap
+    )
 
   // json
-  val directory = new File("conf/pipelinejson")
-  val defaultFilters = Map(
-    "*" -> directory.list().map((filename) => {
-      println(filename)
-      filename.split("\\.")(0) -> ConfigLoader.build_from_local("conf/pipelinejson/" + filename)("*")("*")
-    }).toMap
-  )
+//  lazy val directory = new File("conf/pipelinejson")
+//  lazy val defaultFilters = Map(
+//    "*" -> directory.list().map((filename) => {
+//      println(filename)
+//      filename.split("\\.")(0) -> ConfigLoader.build_from_local("conf/pipelinejson/" + filename)("*")("*")
+//    }).toMap
+//  )
 
   println(defaultFilters)
 }

@@ -6,11 +6,9 @@ import akka.http.scaladsl.server.directives.FileInfo
 import akka.stream.scaladsl.{Keep, RunnableGraph, Source}
 import akka.util.ByteString
 import com.hoolix.processor.decoders.RawLineDecoder
-import com.hoolix.processor.filters.loaders.ConfigLoader
-import com.hoolix.processor.flows.{CreateIndexFlow, DecodeFlow, FilterFlow, FiltersLoadFlow}
+import com.hoolix.processor.flows.{ElasticsearchCreateIndexFlow, ElasticsearchBulkRequestFlow, DecodeFlow, FilterFlow, FiltersLoadFlow}
 import com.hoolix.processor.models.{ElasticsearchPortFactory, FileSourceMetadata, Shipper}
 import com.hoolix.processor.modules.ElasticsearchClient
-import com.hoolix.processor.sinks.ElasticsearchBulkRequestSink
 import com.hoolix.processor.sources.ByteStringToEsSource
 import com.typesafe.config.Config
 import org.elasticsearch.client.transport.TransportClient
@@ -54,7 +52,7 @@ object FileToEsStream {
 
     val fileSource = ByteStringToEsSource(parallelism, fileInfo.fileName, byteStringSource).source()
 
-    val esBulkRequestSink = ElasticsearchBulkRequestSink[FileSourceMetadata](esClient, parallelism)(config, futureExecutionContext)
+    val esBulkRequestSink = ElasticsearchBulkRequestFlow[FileSourceMetadata](esClient, parallelism)(config, futureExecutionContext)
     val esSink = esBulkRequestSink
 
     def stream: RunnableGraph[Future[Done]] = {
@@ -63,7 +61,7 @@ object FileToEsStream {
       val filtersLoadFlow = FiltersLoadFlow[FileSourceMetadata, ElasticsearchPortFactory](parallelism).flow
 
       val filterFlow = FilterFlow[FileSourceMetadata, ElasticsearchPortFactory](parallelism).flow()
-      val createIndexFlow = CreateIndexFlow[FileSourceMetadata](
+      val createIndexFlow = ElasticsearchCreateIndexFlow[FileSourceMetadata](
         parallelism,
         esClient,
         ElasticsearchClient.esIndexCreationSettings()

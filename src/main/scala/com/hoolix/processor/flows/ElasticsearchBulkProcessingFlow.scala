@@ -1,5 +1,7 @@
 package com.hoolix.processor.flows
 
+import java.util.concurrent.atomic.AtomicLong
+
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import com.hoolix.processor.models._
@@ -12,29 +14,38 @@ import scala.collection.JavaConversions
   * Hoolix 2017
   * Created by simon on 1/6/17.
   */
-case class ElasticsearchBulkFlow[SrcMeta <: SourceMetadata](
+case class ElasticsearchBulkProcessingFlow[SrcMeta <: SourceMetadata](
                                                              bulkActions: Int,
                                                              bulkSize: ByteSizeValue,
                                                              timeoutInMillis: Long
                                                            )
-  extends GraphStage[FlowShape[Shipper[SrcMeta, ElasticsearchPortFactory], Option[(BulkRequest, Seq[SrcMeta])]]] {
+  extends GraphStage[FlowShape[Shipper[SrcMeta, ElasticsearchPortFactory], Option[ElasticsearchBulkRequestContainer[SrcMeta]]]] {
 
-  type BulkRequestAndOffsets = (BulkRequest, Seq[SrcMeta])
   type Shipperz = Shipper[SrcMeta, ElasticsearchPortFactory]
 
   val in: Inlet[Shipperz] = Inlet[Shipperz]("EventIn")
-  val out: Outlet[Option[BulkRequestAndOffsets]] = Outlet[Option[BulkRequestAndOffsets]]("BulkRequestOut")
+  val out: Outlet[Option[ElasticsearchBulkRequestContainer[SrcMeta]]] =
+    Outlet[Option[ElasticsearchBulkRequestContainer[SrcMeta]]]("BulkRequestOut")
 
   val bulkSizeInBytes: Long = bulkSize.getBytes
 
-  var bulkRequest: BulkRequest = new BulkRequest()
-  var offsets: Seq[SrcMeta] = Seq()
-  var bulkTime: Long = 0
-
-  override val shape: FlowShape[Shipperz, Option[BulkRequestAndOffsets]] = FlowShape(in, out)
+  override val shape: FlowShape[Shipperz, Option[ElasticsearchBulkRequestContainer[SrcMeta]]] = FlowShape(in, out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = {
     new GraphStageLogic(shape) {
+      val bulkRequestAtomic: AtomicLong = new AtomicLong(0)
+
+      var bulkTime: Long = 0
+
+      var bulkRequestContainer: ElasticsearchBulkRequestContainer[SrcMeta] =
+        ElasticsearchBulkRequestContainer(
+          bulkRequestAtomic.get(),
+          new BulkRequest(),
+          bulkResponse = None,
+          bulkRequestError = None,
+          Seq()
+        )
+
       override def preStart(): Unit = {
         bulkTime = System.currentTimeMillis()
         pull(in)
@@ -49,15 +60,21 @@ case class ElasticsearchBulkFlow[SrcMeta <: SourceMetadata](
             val portFactory = incomingEvent.portFactory
             val sourceMetadata = incomingEvent.sourceMetadata
 
-            bulkRequest = bulkRequest.add(
-              portFactory.generateRequest(sourceMetadata, event).source(
-                JavaConversions.mutableMapAsJavaMap(incomingEvent.event.toPayload)
-              )
+            bulkRequestContainer = ElasticsearchBulkRequestContainer(
+              bulkRequestContainer.id,
+              bulkRequestContainer.bulkRequest.add(
+                portFactory.generateRequest(sourceMetadata, event).source(
+                  JavaConversions.mutableMapAsJavaMap(event.toPayload)
+                )
+              ),
+              bulkRequestContainer.bulkResponse,
+              bulkRequestContainer.bulkRequestError,
+              bulkRequestContainer.shippers :+ incomingEvent
             )
 
-            offsets :+= incomingEvent.sourceMetadata
           }
 
+          val bulkRequest = bulkRequestContainer.bulkRequest
           if (((bulkRequest.estimatedSizeInBytes() < bulkSizeInBytes) &&
             (bulkRequest.numberOfActions() < bulkActions)) &&
             !hasBeenPulled(in)) {
@@ -67,9 +84,9 @@ case class ElasticsearchBulkFlow[SrcMeta <: SourceMetadata](
         }
 
         override def onUpstreamFinish(): Unit = {
-          if (bulkRequest.numberOfActions() > 0) {
+          if (bulkRequestContainer.bulkRequest.numberOfActions() > 0) {
             println("upstream finished, bulking rest of the events")
-            emit(out, Some(bulkRequest, offsets))
+            emit(out, Some(bulkRequestContainer))
             complete(out)
           }
         }
@@ -79,6 +96,8 @@ case class ElasticsearchBulkFlow[SrcMeta <: SourceMetadata](
 
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
+          val bulkRequest = bulkRequestContainer.bulkRequest
+
           if (isClosed(out)) {
             if (bulkRequest.numberOfActions() > 0) {
               fail(out, new IllegalStateException("there are still requests left to be bulked!"))
@@ -95,9 +114,15 @@ case class ElasticsearchBulkFlow[SrcMeta <: SourceMetadata](
                 (bulkRequest.numberOfActions() > 0))) &&
               isAvailable(out)) {
 
-            push(out, Some(bulkRequest, offsets))
-            bulkRequest = new BulkRequest()
-            offsets = Seq()
+            push(out, Some(bulkRequestContainer))
+
+            bulkRequestContainer = ElasticsearchBulkRequestContainer(
+              bulkRequestAtomic.incrementAndGet(),
+              new BulkRequest(),
+              bulkResponse = None,
+              bulkRequestError = None,
+              Seq()
+            )
             bulkTime = System.currentTimeMillis()
 
             if (!hasBeenPulled(in)) {

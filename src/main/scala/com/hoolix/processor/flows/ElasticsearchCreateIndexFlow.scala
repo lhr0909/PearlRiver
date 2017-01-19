@@ -20,12 +20,12 @@ import scala.util.{Failure, Success}
   * Hoolix 2017
   * Created by simon on 1/7/17.
   */
-object CreateIndexFlow {
+object ElasticsearchCreateIndexFlow {
   //TODO: get this index cache into SQL
   val createdIndexCache: TrieMap[String, Boolean] = TrieMap()
 }
 
-case class CreateIndexFlow[SrcMeta <: SourceMetadata](
+case class ElasticsearchCreateIndexFlow[SrcMeta <: SourceMetadata](
                             parallelism: Int,
                             esClient: TransportClient,
                             indexSettings: Settings.Builder
@@ -47,7 +47,7 @@ case class CreateIndexFlow[SrcMeta <: SourceMetadata](
              event: Shipperz
            )(implicit ec: ExecutionContext): Future[IndicesExistsResponse] = {
 
-    if (CreateIndexFlow.createdIndexCache.contains(getIndexName(event))) {
+    if (ElasticsearchCreateIndexFlow.createdIndexCache.contains(getIndexName(event))) {
       Future.successful(new IndicesExistsResponse(true))
     } else {
       val promise = Promise[IndicesExistsResponse]()
@@ -91,14 +91,14 @@ case class CreateIndexFlow[SrcMeta <: SourceMetadata](
         exist(esClient, event) onComplete {
           case Success(valueExist) =>
             if (valueExist.isExists) {
-              CreateIndexFlow.createdIndexCache.put(getIndexName(event), true)
+              ElasticsearchCreateIndexFlow.createdIndexCache.put(getIndexName(event), true)
               p.success(event)
             } else {
               println(s"index ${ getIndexName(event) } does not exist, creating it")
               create(esClient, indexSettings, event) onComplete {
                 case Success(_) =>
                   println(s"successfully created index ${ getIndexName(event) }")
-                  CreateIndexFlow.createdIndexCache.put(getIndexName(event), true)
+                  ElasticsearchCreateIndexFlow.createdIndexCache.put(getIndexName(event), true)
                   p.success(event)
 
                 case Failure(e: RemoteTransportException) =>

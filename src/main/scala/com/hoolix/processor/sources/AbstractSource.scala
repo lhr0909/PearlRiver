@@ -23,7 +23,7 @@ abstract class AbstractSource[SrcMeta <: SourceMetadata, PortFac <: PortFactory]
 
   def convertToShipper(incoming: S): Future[Shipper[SrcMeta, PortFac]]
 
-  def source()(implicit config: Config, system: ActorSystem): Source[Shipper[SrcMeta, PortFac], Mat] = {
+  def source(): Source[Shipper[SrcMeta, PortFac], Mat] = {
     startingSource.mapAsync(parallelism)(convertToShipper).named(s"$sourceType-source")
   }
 }

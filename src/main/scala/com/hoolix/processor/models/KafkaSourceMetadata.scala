@@ -1,21 +1,21 @@
 package com.hoolix.processor.models
 
-import akka.kafka.ConsumerMessage.CommittableOffset
+import org.apache.kafka.clients.consumer.{ConsumerRecord, OffsetAndMetadata}
+import org.apache.kafka.common.TopicPartition
 
 /**
   * Hoolix 2017
   * Created by simon on 1/14/17.
   */
-case class KafkaSourceMetadata(committableOffset: CommittableOffset) extends SourceMetadata {
+case class KafkaSourceMetadata(consumerRecord: ConsumerRecord[String, String]) extends SourceMetadata {
 
-  type OffsetT = CommittableOffset
+  type OffsetT = ConsumerRecord[String, String]
 
-  override val offset: OffsetT = committableOffset
+  override val offset: OffsetT = consumerRecord
 
-  def topic: String = offset.partitionOffset.key.topic
-  def partition: Int = offset.partitionOffset.key.partition
-  def partitionOffset: Long = offset.partitionOffset.offset
+  lazy val topicPartition: TopicPartition = new TopicPartition(offset.topic(), offset.partition())
+  def offsetAndMetadata(metadata: String): OffsetAndMetadata = new OffsetAndMetadata(offset.offset(), metadata)
 
-  override def id: String = s"$topic.$partition.$partitionOffset"
+  override def id: String = s"${offset.topic()}.${offset.partition()}.${offset.offset()}"
 
 }
