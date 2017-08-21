@@ -3,19 +3,20 @@
 #pkg="target/scala-2.10/XYZ-Pipeline-assembly-1.0.jar"
 #release="$(awk -F= '/^pipeline_version/{print $2}' gradle.properties)"
 
-pkg="dist/XYZ-Processor.jar"
+pkg="dist/Pearl-River.jar"
 release="0.1"
-build_pkg="build/libs/xyz-processor-$release.jar"
+file_name="pearl-river-$release"
+build_pkg="build/libs/$file_name.jar"
 
 ./gradlew shadowJar $@ || exit 1
 
 mkdir -p dist
 
-cp -f $build_pkg $pkg
+cp -f ${build_pkg} ${pkg}
 
-tar -czvf xyz-processor-$release.tar \
+tar -czvf ${file_name}.tar \
     --exclude bin/package.sh \
-    $pkg \
+    ${pkg} \
     conf/* \
     bin/* || exit 1
 
