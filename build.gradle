@@ -1,4 +1,4 @@
-group 'com.hoolix'
+group 'io.divby0'
 version '0.1-SNAPSHOT'
 
 apply plugin: 'idea'
@@ -98,14 +98,14 @@ buildscript {
 apply plugin: "com.github.johnrengelman.shadow"
 
 shadowJar {
-    baseName "xyz-processor"
+    baseName "pearl-river"
     version = "0.1"
     zip64  true
     classifier = null
 
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
     manifest {
-        attributes "Main-Class": "com.hoolix.processor.XYZProcessorMain"
+        attributes "Main-Class": "io.divby0.processor.Main"
     }
     //require by akka
     transform(com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer) {
@@ -114,13 +114,13 @@ shadowJar {
 }
 
 jar {
-    baseName "xyz-processor"
+    baseName "pearl-river"
     version = "0.1"
     zip64  true
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }}
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
     manifest {
-        attributes "Main-Class": "com.hoolix.processor.XYZProcessorMain"
+        attributes "Main-Class": "io.divby0.processor.Main"
     }
     //exec {
     //    new File("${projectDir}/target/scala-2.10").mkdirs()
