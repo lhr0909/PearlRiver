@@ -1,2 +1,2 @@
-# XYZ-Processor
-Streaming Data Processor for Hooli XYZ
+# Pearl River
+Reactive Streaming Data Processor, just like the ports in my hometown
